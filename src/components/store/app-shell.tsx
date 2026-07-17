@@ -52,6 +52,9 @@ export function AppShell({ products, categories, settings }: AppShellProps) {
         freeShippingThreshold={settings.freeShippingThreshold}
         shippingFee={settings.shippingFee}
         razorpayKeyId={settings.razorpayKeyId}
+        paymentEnabled={settings.paymentEnabled}
+        codEnabled={settings.codEnabled}
+        upiId={settings.upiId}
       />
     );
   } else if (segments[0] === "order" && segments[1]) {

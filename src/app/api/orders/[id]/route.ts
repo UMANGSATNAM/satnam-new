@@ -58,12 +58,16 @@ export async function PUT(
     include: { items: true },
   });
 
-  // If status changed to CONFIRMED and email not yet sent, send emails
-  if (body.sendStatusEmail === true && body.status === "CONFIRMED") {
-    await Promise.all([
-      sendOrderConfirmationEmail(serializeOrder(order)),
-      sendAdminOrderNotification(serializeOrder(order)),
-    ]);
+  // If admin requested to (re)send order emails, send both confirmation + admin notification
+  if (body.sendStatusEmail === true) {
+    try {
+      await Promise.all([
+        sendOrderConfirmationEmail(serializeOrder(order)),
+        sendAdminOrderNotification(serializeOrder(order)),
+      ]);
+    } catch (e) {
+      console.error("[orders] Failed to send emails:", e);
+    }
   }
 
   return NextResponse.json(serializeOrder(order));

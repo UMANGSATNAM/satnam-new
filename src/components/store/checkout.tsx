@@ -31,9 +31,12 @@ interface CheckoutProps {
   freeShippingThreshold: number;
   shippingFee: number;
   razorpayKeyId: string;
+  paymentEnabled: boolean;
+  codEnabled: boolean;
+  upiId: string;
 }
 
-export function Checkout({ freeShippingThreshold, shippingFee, razorpayKeyId }: CheckoutProps) {
+export function Checkout({ freeShippingThreshold, shippingFee, razorpayKeyId, paymentEnabled, codEnabled, upiId }: CheckoutProps) {
   const { items, subtotal, couponCode, couponDiscount, clear, closeCart } = useCart();
   const { navigate } = useRouter();
   const [form, setForm] = useState({
@@ -46,7 +49,7 @@ export function Checkout({ freeShippingThreshold, shippingFee, razorpayKeyId }: 
     pincode: "",
     notes: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState<"RAZORPAY" | "COD">("RAZORPAY");
+  const [paymentMethod, setPaymentMethod] = useState<"RAZORPAY" | "COD">(paymentEnabled ? "RAZORPAY" : "COD");
   const [placing, setPlacing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -361,47 +364,63 @@ export function Checkout({ freeShippingThreshold, shippingFee, razorpayKeyId }: 
               <CreditCard size={18} className="text-primary" /> Payment Method
             </h2>
             <div className="grid gap-2 sm:grid-cols-2">
-              <button
-                onClick={() => setPaymentMethod("RAZORPAY")}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
-                  paymentMethod === "RAZORPAY" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                )}
-              >
-                <div className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full",
-                  paymentMethod === "RAZORPAY" ? "bg-primary text-primary-foreground" : "bg-muted"
-                )}>
-                  {paymentMethod === "RAZORPAY" ? <Check size={16} /> : <Wallet size={16} />}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Online Payment</p>
-                  <p className="text-xs text-muted-foreground">Cards, UPI, Net Banking, Wallets</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setPaymentMethod("COD")}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
-                  paymentMethod === "COD" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                )}
-              >
-                <div className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full",
-                  paymentMethod === "COD" ? "bg-primary text-primary-foreground" : "bg-muted"
-                )}>
-                  {paymentMethod === "COD" ? <Check size={16} /> : <Truck size={16} />}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Cash on Delivery</p>
-                  <p className="text-xs text-muted-foreground">Pay when you receive</p>
-                </div>
-              </button>
+              {paymentEnabled && (
+                <button
+                  onClick={() => setPaymentMethod("RAZORPAY")}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
+                    paymentMethod === "RAZORPAY" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <div className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full",
+                    paymentMethod === "RAZORPAY" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  )}>
+                    {paymentMethod === "RAZORPAY" ? <Check size={16} /> : <Wallet size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Online Payment</p>
+                    <p className="text-xs text-muted-foreground">Cards, UPI, Net Banking, Wallets</p>
+                  </div>
+                </button>
+              )}
+              {codEnabled && (
+                <button
+                  onClick={() => setPaymentMethod("COD")}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all",
+                    paymentMethod === "COD" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <div className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full",
+                    paymentMethod === "COD" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  )}>
+                    {paymentMethod === "COD" ? <Check size={16} /> : <Truck size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Cash on Delivery</p>
+                    <p className="text-xs text-muted-foreground">Pay when you receive</p>
+                  </div>
+                </button>
+              )}
             </div>
-            {!razorpayKeyId && paymentMethod === "RAZORPAY" && (
-              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                ⚠️ Razorpay is not configured yet. Online payment will run in demo mode. Add your Razorpay keys in Admin → Settings to enable real payments.
+            {!paymentEnabled && !codEnabled && (
+              <p className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                ⚠️ No payment method is enabled. Please contact us to place your order.
               </p>
+            )}
+            {paymentMethod === "RAZORPAY" && !razorpayKeyId && (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                ⚠️ Razorpay is not configured yet. Online payment will run in demo mode. The admin can configure it from Admin → Integrations.
+              </p>
+            )}
+            {upiId && paymentMethod === "RAZORPAY" && (
+              <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-semibold text-foreground">Or pay directly via UPI:</p>
+                <p className="mt-1 font-mono text-sm font-bold text-primary">{upiId}</p>
+                <p className="text-[10px] text-muted-foreground">Use this UPI ID in your UPI app, then email the screenshot to confirm your order.</p>
+              </div>
             )}
           </div>
 

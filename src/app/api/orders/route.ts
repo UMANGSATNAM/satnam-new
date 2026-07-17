@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { serializeOrder } from "@/lib/serialize";
 import { getAdminFromRequest } from "@/lib/auth";
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
+import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -137,5 +139,19 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json(serializeOrder(order), { status: 201 });
+  const serialized = serializeOrder(order);
+  // Send emails (non-blocking) — only if email integration is enabled in admin settings
+  const settings = await getSettings();
+  if (settings.emailEnabled) {
+    sendOrderConfirmationEmail(serialized).catch((e) =>
+      console.error("Confirmation email failed:", e)
+    );
+    sendAdminOrderNotification(serialized).catch((e) =>
+      console.error("Admin notification email failed:", e)
+    );
+  } else {
+    console.log("[orders] Email disabled in settings, skipping emails for", order.orderNumber);
+  }
+
+  return NextResponse.json(serialized, { status: 201 });
 }

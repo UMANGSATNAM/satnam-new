@@ -122,3 +122,53 @@ Configuration needed by user (in .env file):
 - Admin login: admin@satnamsinghchana.com / satnam@2026
 
 Test coupons: WELCOME10 (10% off), FLAT50 (₹50 off ₹499+), SAVE15 (15% off ₹999+), FREESHIP (free shipping)
+
+---
+Task ID: INTEGRATIONS-UI
+Agent: Main Orchestrator
+Task: Add Email & Payment Gateway configuration to Admin Panel (UI-based, no .env editing) + link store↔admin
+
+Work Log:
+- Extended `Settings` type with new DB-stored fields: `razorpayKeySecret`, `gmailAppPassword`, `paymentEnabled`, `emailEnabled`, `codEnabled`, `upiId` (plus existing `razorpayKeyId`, `gmailUser`, `storeNotifyEmail`)
+- Added `SECRET_MASK` sentinel ("••••••••••••") to types.ts for masking secrets in API responses
+- Rewrote `getSettings()` to read ALL integration fields from DB (with env fallback) and parse booleans correctly
+- Rewrote `razorpay.ts`: `getRazorpay()` now async, reads keys from DB settings; `isRazorpayConfigured()` async; `verifyRazorpaySignature()` async; added `testRazorpayConnection()` that creates a ₹1 test order to verify keys
+- Rewrote `email.ts`: `getTransporter()` reads gmailUser + gmailAppPassword from DB settings; `isEmailConfigured()` async; added `sendTestEmail()` that sends a branded test email to verify SMTP
+- Rewrote `settings/route.ts`:
+  - GET masks `razorpayKeySecret` & `gmailAppPassword` (returns SECRET_MASK if set, empty if not) — client never receives raw secrets
+  - PUT skips secret fields that come back as the mask sentinel (preserves stored secret on partial saves)
+  - Added POST handler with `action=test-email` (saves form settings first, then sends test email) and `action=test-razorpay` (saves form settings first, then tests connection)
+- Updated `checkout/route.ts`: uses async `isRazorpayConfigured()`/`verifyRazorpaySignature()`; respects `emailEnabled` flag before sending order emails
+- Updated `orders/route.ts` (COD path): now sends order confirmation + admin notification emails (respecting `emailEnabled`)
+- Updated `orders/[id]/route.ts`: `sendStatusEmail` flag now triggers emails regardless of status (for admin resend)
+- Added new "Integrations" tab to admin sidebar (between Coupons and Settings)
+- Built `IntegrationsView` component with:
+  - Payment Gateway card: Key ID input, Key Secret password input (with show/hide toggle), UPI ID input, COD toggle, paymentEnabled toggle, Live/Demo status badge, Save Keys + Test Connection buttons, link to Razorpay dashboard
+  - Email Service card: Gmail address input, App Password password input (with show/hide toggle), Store Notification Email input, emailEnabled toggle, Active/Inactive status badge, Save Config + Send Test Email buttons, link to Google App Passwords
+  - "What gets sent" info box listing the 3 email types
+  - Quick Setup Guide card with step-by-step instructions for both Razorpay & Gmail
+- Refactored `SettingsView`: removed the old static ".env instructions" card, added integration status quick-cards + a prompt pointing to the new Integrations tab
+- Updated `checkout.tsx`: accepts `paymentEnabled`, `codEnabled`, `upiId` props; only shows payment methods that are enabled; shows UPI ID as alternative payment option when set; updated demo-mode warning to point to Admin → Integrations
+- Updated `app-shell.tsx`: passes new settings props to Checkout
+- Added "Resend Order Emails" button to admin Orders dialog (calls PUT with sendStatusEmail:true)
+- Verified via curl: saving Razorpay keys → secret masked, razorpayConfigured=True; saving Gmail creds → password masked, emailConfigured=True; re-saving with mask sentinel → secret preserved
+- Verified via agent-browser: admin login → dashboard → Integrations tab renders with both Payment Gateway & Email Service config sections, status badges (Live), toggle switches, masked secret fields, Save/Test buttons, and the previously-saved config (satnam@upi, test@gmail.com) displays correctly
+- Lint: clean (0 errors, 0 warnings)
+
+Stage Summary:
+✅ Admin panel can now configure Email (Gmail SMTP) AND Payment Gateway (Razorpay) entirely from the UI — no .env editing or server restart needed.
+✅ Secrets are stored in the database and masked (••••) in API responses — never exposed to the browser.
+✅ Both integrations have "Test" buttons (Test Connection for Razorpay, Send Test Email for Gmail) that verify the config works.
+✅ Store↔admin fully linked:
+   - Store checkout uses the DB-configured `razorpayKeyId` for the Razorpay checkout SDK
+   - Store checkout respects `paymentEnabled`/`codEnabled`/`upiId` from admin settings
+   - Order emails (confirmation + admin notification) only fire when `emailEnabled` is on
+   - Admin can resend order emails from the Orders dialog
+   - Admin can toggle COD, online payment, and email on/off instantly
+✅ .env still works as a fallback for all credentials (backward compatible).
+
+Unresolved issues / next-phase recommendations:
+- Product images are still AI-generated food bowls (could be replaced with real packaging mockups)
+- Wishlist page, order tracking page, search improvements, loading skeletons, error boundaries still TODO (from original enhancement list)
+- Could add webhook endpoint for Razorpay payment capture events
+- Could add email template customization in admin

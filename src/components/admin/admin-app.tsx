@@ -25,6 +25,14 @@ import {
   Search,
   Check,
   XCircle,
+  CreditCard,
+  Zap,
+  Send,
+  ShieldCheck,
+  KeyRound,
+  EyeOff,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +80,7 @@ import { toast } from "sonner";
 import type { Product, Order, Category, Coupon, Settings } from "@/lib/types";
 import { StarRating } from "@/components/shared/star-rating";
 
-type AdminTab = "dashboard" | "products" | "orders" | "categories" | "reviews" | "coupons" | "settings";
+type AdminTab = "dashboard" | "products" | "orders" | "categories" | "reviews" | "coupons" | "integrations" | "settings";
 
 export function AdminApp({ settings: initialSettings }: { settings: Settings }) {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -105,6 +113,7 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
     { id: "categories", label: "Categories", icon: Tag },
     { id: "reviews", label: "Reviews", icon: Star },
     { id: "coupons", label: "Coupons", icon: Tag },
+    { id: "integrations", label: "Integrations", icon: Zap },
     { id: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
@@ -193,6 +202,7 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
         {tab === "categories" && <CategoriesView />}
         {tab === "reviews" && <ReviewsView />}
         {tab === "coupons" && <CouponsView />}
+        {tab === "integrations" && <IntegrationsView initialSettings={initialSettings} />}
         {tab === "settings" && <SettingsView initialSettings={initialSettings} />}
       </main>
     </div>
@@ -691,6 +701,25 @@ function OrdersView() {
     }
   };
 
+  const resendEmails = async (id: string) => {
+    toast.info("Resending order emails...");
+    try {
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sendStatusEmail: true }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast.success("📧 Order confirmation & admin notification emails sent!");
+      } else {
+        toast.error(d.error || "Failed to send emails (is Gmail configured in Integrations?)");
+      }
+    } catch {
+      toast.error("Failed to send emails");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -805,6 +834,24 @@ function OrdersView() {
               {selected.razorpayPaymentId && (
                 <p className="text-xs text-muted-foreground">Payment ID: {selected.razorpayPaymentId}</p>
               )}
+              <div className="flex gap-2 border-t pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => resendEmails(selected.id)}
+                >
+                  <Send size={14} /> Resend Order Emails
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => setSelected(null)}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -1062,32 +1109,46 @@ function SettingsView({ initialSettings }: { initialSettings: Settings }) {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <h1 className="font-playfair text-2xl font-bold">Settings</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-playfair text-2xl font-bold">Store Settings</h1>
+          <p className="text-sm text-muted-foreground">Manage your store information, shipping & social links.</p>
+        </div>
+      </div>
 
-      {/* Integration status */}
+      {/* Integration status quick-cards */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Card>
+        <Card className={cn(emailConfigured ? "border-emerald-200" : "border-amber-200")}>
           <CardContent className="flex items-center gap-3 p-4">
             <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", emailConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
               {emailConfigured ? <Check size={20} /> : <AlertTriangle size={20} />}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-bold">Gmail SMTP</p>
               <p className="text-xs text-muted-foreground">{emailConfigured ? "Configured & ready" : "Not configured"}</p>
             </div>
+            <Mail size={16} className="text-muted-foreground" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className={cn(razorpayConfigured ? "border-emerald-200" : "border-amber-200")}>
           <CardContent className="flex items-center gap-3 p-4">
             <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", razorpayConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
               {razorpayConfigured ? <Check size={20} /> : <AlertTriangle size={20} />}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-bold">Razorpay</p>
               <p className="text-xs text-muted-foreground">{razorpayConfigured ? "Configured & ready" : "Demo mode only"}</p>
             </div>
+            <CreditCard size={16} className="text-muted-foreground" />
           </CardContent>
         </Card>
+      </div>
+
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <p className="flex items-center gap-2 text-sm text-foreground">
+          <Zap size={16} className="text-primary" />
+          <span><strong>Email & Payment Gateway</strong> can now be configured directly from the <strong>Integrations</strong> tab — no need to edit <code className="rounded bg-background px-1 text-xs">.env</code>!</span>
+        </p>
       </div>
 
       <Card>
@@ -1097,7 +1158,7 @@ function SettingsView({ initialSettings }: { initialSettings: Settings }) {
             <div><Label>Brand Name</Label><Input value={settings.brandName} onChange={(e) => setSettings({ ...settings, brandName: e.target.value })} /></div>
             <div><Label>Tagline</Label><Input value={settings.tagline} onChange={(e) => setSettings({ ...settings, tagline: e.target.value })} /></div>
           </div>
-          <div><Label>Email</Label><Input value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })} /></div>
+          <div><Label>Email (display)</Label><Input value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })} /></div>
           <div><Label>Phone</Label><Input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone: e.target.value })} /></div>
           <div><Label>Address</Label><Textarea value={settings.address} onChange={(e) => setSettings({ ...settings, address: e.target.value })} rows={2} /></div>
           <div><Label>Announcement Bar Text</Label><Input value={settings.announcementBar} onChange={(e) => setSettings({ ...settings, announcementBar: e.target.value })} /></div>
@@ -1122,32 +1183,365 @@ function SettingsView({ initialSettings }: { initialSettings: Settings }) {
         </CardContent>
       </Card>
 
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-amber-700">
-            <AlertTriangle size={16} /> Payment & Email Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="rounded-lg bg-amber-100/50 p-3 text-xs text-amber-800">
-            <p className="mb-2 font-semibold">To enable real Razorpay payments & Gmail email notifications, edit the <code className="rounded bg-white px-1">.env</code> file at the project root and set:</p>
-            <pre className="overflow-x-auto whitespace-pre-wrap text-[11px]">{`RAZORPAY_KEY_ID=rzp_live_xxxxxxxx
-RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxx
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_xxxxxxxx
-
-GMAIL_USER=yourgmail@gmail.com
-GMAIL_APP_PASSWORD=your-16-char-app-password
-STORE_NOTIFY_EMAIL=yourgmail@gmail.com`}</pre>
-            <p className="mt-2">Then restart the dev server. Gmail requires a 16-character App Password (enable 2FA first → generate at myaccount.google.com/apppasswords).</p>
-          </div>
-          <p className="text-xs text-muted-foreground">Current Gmail user: <span className="font-mono font-semibold">{settings.gmailUser || "(not set)"}</span></p>
-        </CardContent>
-      </Card>
-
       <Button onClick={save} disabled={saving} className="gap-2">
         {saving ? <Loader2 size={16} className="animate-spin" /> : null}
         Save Settings
       </Button>
+    </div>
+  );
+}
+
+// ============================================================
+// INTEGRATIONS VIEW — Configure Email & Payment Gateway from UI
+// ============================================================
+function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
+  const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [emailConfigured, setEmailConfigured] = useState(false);
+  const [razorpayConfigured, setRazorpayConfigured] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testingRazorpay, setTestingRazorpay] = useState(false);
+  const [showEmailPass, setShowEmailPass] = useState(false);
+  const [showRzpSecret, setShowRzpSecret] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        setSettings(d);
+        setEmailConfigured(d.emailConfigured);
+        setRazorpayConfigured(d.razorpayConfigured);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setSettings((s) => ({ ...s, [key]: value }));
+  };
+
+  const saveSettings = async (patch?: Partial<Settings>) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch || settings),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setSettings(d);
+        setEmailConfigured(d.emailConfigured);
+        setRazorpayConfigured(d.razorpayConfigured);
+        toast.success("Settings saved! 🎉");
+      } else {
+        toast.error("Failed to save");
+      }
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testEmail = async () => {
+    setTestingEmail(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test-email", settings }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        toast.success(d.message);
+        setEmailConfigured(true);
+      } else {
+        toast.error(d.message);
+      }
+    } catch {
+      toast.error("Test failed — check server logs");
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+  const testRazorpay = async () => {
+    setTestingRazorpay(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test-razorpay", settings }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        toast.success(d.message);
+        setRazorpayConfigured(true);
+      } else {
+        toast.error(d.message);
+      }
+    } catch {
+      toast.error("Test failed — check server logs");
+    } finally {
+      setTestingRazorpay(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
+  }
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div>
+        <h1 className="font-playfair text-2xl font-bold">Integrations</h1>
+        <p className="text-sm text-muted-foreground">
+          Configure your payment gateway & email service here. Changes are saved to the database and take effect instantly — no need to restart the server or edit <code className="rounded bg-muted px-1 text-xs">.env</code>.
+        </p>
+      </div>
+
+      {/* ============ PAYMENT GATEWAY (Razorpay) ============ */}
+      <Card className={cn("overflow-hidden", razorpayConfigured ? "border-emerald-200" : "border-amber-200")}>
+        <CardHeader className="border-b border-border bg-muted/30 pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", razorpayConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
+                <CreditCard size={22} />
+              </div>
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Payment Gateway
+                  <Badge variant={razorpayConfigured ? "default" : "secondary"} className="text-[10px]">
+                    {razorpayConfigured ? "● Live" : "● Demo Mode"}
+                  </Badge>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Razorpay — accept cards, UPI, net banking & wallets</p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-medium">
+              <Switch checked={settings.paymentEnabled} onCheckedChange={(v) => update("paymentEnabled", v)} />
+              {settings.paymentEnabled ? "Enabled" : "Disabled"}
+            </label>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-4">
+          {!razorpayConfigured && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              <Info size={14} className="mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold">Demo mode is active.</p>
+                <p>Online payments will use a mock order. Add your Razorpay keys below to accept real payments. Get your keys from the Razorpay Dashboard → API Keys.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="flex items-center gap-1.5 text-xs"><KeyRound size={12} /> Key ID <span className="text-destructive">*</span></Label>
+              <Input
+                value={settings.razorpayKeyId}
+                onChange={(e) => update("razorpayKeyId", e.target.value)}
+                placeholder="rzp_live_xxxxxxxxxxxx"
+                className="mt-1 font-mono text-xs"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">Public key — safe to expose on client. Starts with <code>rzp_live_</code> or <code>rzp_test_</code>.</p>
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5 text-xs"><Lock size={12} /> Key Secret <span className="text-destructive">*</span></Label>
+              <div className="relative mt-1">
+                <Input
+                  type={showRzpSecret ? "text" : "password"}
+                  value={settings.razorpayKeySecret}
+                  onChange={(e) => update("razorpayKeySecret", e.target.value)}
+                  placeholder="Enter your Razorpay key secret"
+                  className="pr-9 font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRzpSecret((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Toggle visibility"
+                >
+                  {showRzpSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Secret key — stored encrypted in DB. Never share publicly.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs">UPI ID (optional)</Label>
+              <Input
+                value={settings.upiId}
+                onChange={(e) => update("upiId", e.target.value)}
+                placeholder="yourname@upi"
+                className="mt-1 text-xs"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">Shown to customers as an alternative UPI payment option.</p>
+            </div>
+            <label className="flex items-center gap-2 self-end rounded-lg border border-border p-3">
+              <Switch checked={settings.codEnabled} onCheckedChange={(v) => update("codEnabled", v)} />
+              <div>
+                <p className="text-xs font-semibold">Cash on Delivery</p>
+                <p className="text-[10px] text-muted-foreground">Allow customers to pay on delivery</p>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button onClick={() => saveSettings()} disabled={saving} variant="outline" size="sm" className="gap-1.5">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save Keys
+            </Button>
+            <Button onClick={testRazorpay} disabled={testingRazorpay} size="sm" className="gap-1.5">
+              {testingRazorpay ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Test Connection
+            </Button>
+            <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline">
+              Get Razorpay Keys <ExternalLink size={11} />
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ============ EMAIL (Gmail SMTP) ============ */}
+      <Card className={cn("overflow-hidden", emailConfigured ? "border-emerald-200" : "border-amber-200")}>
+        <CardHeader className="border-b border-border bg-muted/30 pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", emailConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
+                <Mail size={22} />
+              </div>
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Email Service
+                  <Badge variant={emailConfigured ? "default" : "secondary"} className="text-[10px]">
+                    {emailConfigured ? "● Active" : "● Inactive"}
+                  </Badge>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Gmail SMTP — order confirmations & admin notifications</p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-medium">
+              <Switch checked={settings.emailEnabled} onCheckedChange={(v) => update("emailEnabled", v)} />
+              {settings.emailEnabled ? "Enabled" : "Disabled"}
+            </label>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-4">
+          {!emailConfigured && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              <Info size={14} className="mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold">Email is not configured yet.</p>
+                <p>Without email, order confirmations won't be sent to customers and you won't receive order notifications. Set up Gmail below (requires a 16-character App Password).</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="flex items-center gap-1.5 text-xs"><Mail size={12} /> Gmail Address <span className="text-destructive">*</span></Label>
+              <Input
+                type="email"
+                value={settings.gmailUser}
+                onChange={(e) => update("gmailUser", e.target.value)}
+                placeholder="yourstore@gmail.com"
+                className="mt-1 text-xs"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">Emails will be sent FROM this address.</p>
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5 text-xs"><Lock size={12} /> App Password <span className="text-destructive">*</span></Label>
+              <div className="relative mt-1">
+                <Input
+                  type={showEmailPass ? "text" : "password"}
+                  value={settings.gmailAppPassword}
+                  onChange={(e) => update("gmailAppPassword", e.target.value)}
+                  placeholder="16-character app password"
+                  className="pr-9 font-mono text-xs"
+                  maxLength={16}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEmailPass((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Toggle visibility"
+                >
+                  {showEmailPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Not your regular password. Generate at myaccount.google.com/apppasswords.</p>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Store Notification Email (where order alerts go)</Label>
+            <Input
+              type="email"
+              value={settings.storeNotifyEmail}
+              onChange={(e) => update("storeNotifyEmail", e.target.value)}
+              placeholder="orders@yourstore.com"
+              className="mt-1 text-xs"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">New order notifications will be sent here. Defaults to your Gmail address if empty.</p>
+          </div>
+
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <ShieldCheck size={13} /> What gets sent:
+            </p>
+            <ul className="mt-1.5 space-y-1 text-[11px] text-foreground/80">
+              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>Order confirmation</strong> → to customer's email (instantly after order)</li>
+              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>New order alert</strong> → to your notification email (with full order details)</li>
+              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>Contact form messages</strong> → to your notification email</li>
+            </ul>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button onClick={() => saveSettings()} disabled={saving} variant="outline" size="sm" className="gap-1.5">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save Config
+            </Button>
+            <Button onClick={testEmail} disabled={testingEmail} size="sm" className="gap-1.5">
+              {testingEmail ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send Test Email
+            </Button>
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline">
+              Generate App Password <ExternalLink size={11} />
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ============ Setup Help ============ */}
+      <Card className="bg-muted/30">
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Info size={16} className="text-primary" /> Quick Setup Guide</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-xs text-muted-foreground">
+          <div>
+            <p className="font-semibold text-foreground">💳 Razorpay Setup (5 min):</p>
+            <ol className="ml-4 list-decimal space-y-0.5 pt-1">
+              <li>Create an account at <a href="https://razorpay.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">razorpay.com</a> (free for testing)</li>
+              <li>Go to Dashboard → Settings → API Keys → Generate Key</li>
+              <li>Copy the <strong>Key ID</strong> and <strong>Key Secret</strong> into the fields above</li>
+              <li>Click <strong>Test Connection</strong> to verify, then <strong>Save</strong></li>
+              <li>For production, use live keys (<code>rzp_live_</code>). For testing, use test keys (<code>rzp_test_</code>).</li>
+            </ol>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="font-semibold text-foreground">📧 Gmail Setup (5 min):</p>
+            <ol className="ml-4 list-decimal space-y-0.5 pt-1">
+              <li>Enable <strong>2-Step Verification</strong> on your Google Account (myaccount.google.com)</li>
+              <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-primary hover:underline">App Passwords</a> and create a password for "Mail"</li>
+              <li>Copy the 16-character password (no spaces) into the <strong>App Password</strong> field above</li>
+              <li>Enter your Gmail address & notification email, then click <strong>Send Test Email</strong></li>
+              <li>Check your inbox for the test email to confirm it works!</li>
+            </ol>
+          </div>
+          <div className="border-t border-border pt-3 text-[11px]">
+            <p className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-primary" /> <strong>Security:</strong> All credentials are stored in your database and never exposed to the browser. Secret fields are masked (••••) when returned to this page. You can still use <code>.env</code> as a fallback if preferred.</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

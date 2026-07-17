@@ -2,31 +2,40 @@ import nodemailer from "nodemailer";
 import { getSettings } from "./settings";
 import type { Order } from "./types";
 
-let transporter: nodemailer.Transporter | null = null;
+// Cache transporter keyed by user+pass so changing settings in admin picks up
+let cachedTransporter: { key: string; transporter: nodemailer.Transporter } | null = null;
 
-async function getTransporter() {
-  if (transporter) return transporter;
-  const settings = await getSettings();
-  const user = settings.gmailUser || process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass || user.includes("yourgmail") || pass.includes("your-16-char")) {
-    // No valid Gmail creds - return null so callers can skip sending
-    return null;
-  }
-  transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user,
-      pass,
-    },
-  });
-  return transporter;
+function isPlaceholder(v: string) {
+  return !v || v.includes("yourgmail") || v.includes("your-16-char") || v.includes("xxxx");
 }
 
-export function isEmailConfigured() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  return !!user && !!pass && !user.includes("yourgmail") && !pass.includes("your-16-char");
+/**
+ * Build a nodemailer transporter from DB-stored Gmail credentials (with env fallback).
+ * Returns null if not configured.
+ */
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
+  const settings = await getSettings();
+  const user = settings.gmailUser;
+  const pass = settings.gmailAppPassword;
+  if (isPlaceholder(user) || isPlaceholder(pass)) {
+    return null;
+  }
+  const cacheKey = `${user}:${pass}`;
+  if (cachedTransporter && cachedTransporter.key === cacheKey) {
+    return cachedTransporter.transporter;
+  }
+  const t = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+  cachedTransporter = { key: cacheKey, transporter: t };
+  return t;
+}
+
+/** Check whether Gmail SMTP is fully configured (DB or env). */
+export async function isEmailConfigured(): Promise<boolean> {
+  const settings = await getSettings();
+  return !isPlaceholder(settings.gmailUser) && !isPlaceholder(settings.gmailAppPassword);
 }
 
 function orderItemsHtml(order: Order): string {
@@ -263,5 +272,47 @@ export async function sendContactEmail(name: string, email: string, phone: strin
   } catch (e) {
     console.error("[email] Failed contact email:", e);
     return false;
+  }
+}
+
+/**
+ * Send a test email to verify the Gmail SMTP configuration.
+ * Returns { ok, message }.
+ */
+export async function sendTestEmail(toEmail?: string): Promise<{ ok: boolean; message: string }> {
+  const settings = await getSettings();
+  const t = await getTransporter();
+  if (!t) {
+    return {
+      ok: false,
+      message: "Gmail credentials are not configured. Enter your Gmail address and 16-character App Password.",
+    };
+  }
+  const target = toEmail || settings.storeNotifyEmail || settings.gmailUser;
+  if (!target) {
+    return { ok: false, message: "No recipient email. Set a 'Store Notification Email' first." };
+  }
+  const content = `
+    <h2 style="margin:0 0 8px;color:#1a1a1a;">📧 Test Email from ${settings.brandName}</h2>
+    <p style="margin:0 0 20px;color:#555;">This is a test email to confirm your Gmail SMTP configuration is working correctly.</p>
+    <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 16px;border-radius:6px;margin-bottom:20px;">
+      <p style="margin:0;color:#065f46;font-size:14px;"><strong>✅ Success!</strong> Your email integration is properly configured.</p>
+      <p style="margin:6px 0 0;color:#065f46;font-size:13px;">Order confirmation emails will be sent to customers, and order notifications will be sent to <strong>${settings.storeNotifyEmail || settings.gmailUser}</strong>.</p>
+    </div>
+    <p style="margin:0;color:#888;font-size:13px;">Sent at: ${new Date().toLocaleString("en-IN")}</p>
+  `;
+  const html = baseTemplate("Test Email — SMTP Configuration", content, settings.brandName, settings.tagline);
+  try {
+    await t.sendMail({
+      from: `"${settings.brandName}" <${settings.gmailUser}>`,
+      to: target,
+      subject: `✅ Test Email — ${settings.brandName} SMTP Config`,
+      html,
+    });
+    return { ok: true, message: `✅ Test email sent successfully to ${target}! Check the inbox.` };
+  } catch (e) {
+    const msg = (e as Error).message || String(e);
+    console.error("[email] Test email failed:", e);
+    return { ok: false, message: `❌ ${msg}` };
   }
 }

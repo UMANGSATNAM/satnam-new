@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { serializeOrder } from "@/lib/serialize";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
 import { generateOrderNumber } from "@/lib/utils";
+import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest) {
     if (!amount || amount < 1) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
-    if (!isRazorpayConfigured()) {
+    const configured = await isRazorpayConfigured();
+    if (!configured) {
       // Return a mock order so the flow can proceed in dev/test mode
       return NextResponse.json({
         id: `order_mock_${Date.now()}`,
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
         receipt: generateOrderNumber(),
         status: "created",
         mock: true,
-        note: "Razorpay not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env to enable real payments.",
+        note: "Razorpay not configured. Configure it from Admin Panel → Settings → Integrations.",
       });
     }
     try {
@@ -64,8 +66,9 @@ export async function POST(req: NextRequest) {
     let paymentStatus = "PAID";
     let verified = true;
 
-    if (isRazorpayConfigured() && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
-      verified = verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+    const rzpConfigured = await isRazorpayConfigured();
+    if (rzpConfigured && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
+      verified = await verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
       if (!verified) {
         return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
       }
@@ -146,13 +149,18 @@ export async function POST(req: NextRequest) {
     }
 
     const serialized = serializeOrder(order);
-    // Send emails (non-blocking)
-    sendOrderConfirmationEmail(serialized).catch((e) =>
-      console.error("Confirmation email failed:", e)
-    );
-    sendAdminOrderNotification(serialized).catch((e) =>
-      console.error("Admin notification email failed:", e)
-    );
+    // Send emails (non-blocking) — only if email integration is enabled in admin settings
+    const settings = await getSettings();
+    if (settings.emailEnabled) {
+      sendOrderConfirmationEmail(serialized).catch((e) =>
+        console.error("Confirmation email failed:", e)
+      );
+      sendAdminOrderNotification(serialized).catch((e) =>
+        console.error("Admin notification email failed:", e)
+      );
+    } else {
+      console.log("[checkout] Email disabled in settings, skipping emails for", order.orderNumber);
+    }
 
     return NextResponse.json(serialized, { status: 201 });
   }

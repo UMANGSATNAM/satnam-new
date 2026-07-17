@@ -144,10 +144,18 @@ export interface Settings {
   linkedin?: string;
   freeShippingThreshold: number;
   shippingFee: number;
-  razorpayKeyId: string;
-  gmailUser: string;
-  storeNotifyEmail: string;
   announcementBar: string;
+  // Payment gateway (Razorpay) — stored in DB, configurable from admin
+  razorpayKeyId: string;
+  razorpayKeySecret: string;
+  paymentEnabled: boolean;
+  codEnabled: boolean;
+  upiId: string;
+  // Email (Gmail SMTP) — stored in DB, configurable from admin
+  gmailUser: string;
+  gmailAppPassword: string;
+  storeNotifyEmail: string;
+  emailEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -162,8 +170,17 @@ export const DEFAULT_SETTINGS: Settings = {
   linkedin: "https://linkedin.com",
   freeShippingThreshold: 499,
   shippingFee: 49,
-  razorpayKeyId: "",
-  gmailUser: "",
-  storeNotifyEmail: "",
   announcementBar: "Free Shipping on Orders Over ₹499 • Enjoy 10% Off Your First Order with code WELCOME10",
+  razorpayKeyId: "",
+  razorpayKeySecret: "",
+  paymentEnabled: true,
+  codEnabled: true,
+  upiId: "",
+  gmailUser: "",
+  gmailAppPassword: "",
+  storeNotifyEmail: "",
+  emailEnabled: true,
 };
+
+// Sentinel value returned by the API for secret fields that are set but masked
+export const SECRET_MASK = "••••••••••••";
