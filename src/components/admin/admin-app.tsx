@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Package,
@@ -33,6 +34,19 @@ import {
   EyeOff,
   ExternalLink,
   Info,
+  MessageSquare,
+  MailCheck,
+  Download,
+  Printer,
+  Upload,
+  Image as ImageIcon,
+  Truck,
+  Phone,
+  PhoneCall,
+  CheckCheck,
+  Calendar,
+  Receipt,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,18 +94,35 @@ import { toast } from "sonner";
 import type { Product, Order, Category, Coupon, Settings } from "@/lib/types";
 import { StarRating } from "@/components/shared/star-rating";
 
-type AdminTab = "dashboard" | "products" | "orders" | "categories" | "reviews" | "coupons" | "integrations" | "settings";
+type AdminTab =
+  | "dashboard"
+  | "products"
+  | "orders"
+  | "categories"
+  | "reviews"
+  | "coupons"
+  | "messages"
+  | "subscribers"
+  | "integrations"
+  | "settings";
 
 export function AdminApp({ settings: initialSettings }: { settings: Settings }) {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setAuthed(d?.authenticated === true))
       .catch(() => setAuthed(false));
+
+    // Fetch unread count for badge
+    fetch("/api/admin/contact?status=unread")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setUnreadMsgCount(d?.unreadCount || 0))
+      .catch(() => {});
   }, []);
 
   if (authed === null) {
@@ -106,13 +137,15 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
     return <AdminLogin onSuccess={() => setAuthed(true)} />;
   }
 
-  const tabs: { id: AdminTab; label: string; icon: typeof Package }[] = [
+  const tabs: { id: AdminTab; label: string; icon: typeof Package; badge?: number }[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "products", label: "Products", icon: Package },
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "categories", label: "Categories", icon: Tag },
     { id: "reviews", label: "Reviews", icon: Star },
     { id: "coupons", label: "Coupons", icon: Tag },
+    { id: "messages", label: "Inquiries", icon: MessageSquare, badge: unreadMsgCount },
+    { id: "subscribers", label: "Subscribers", icon: MailCheck },
     { id: "integrations", label: "Integrations", icon: Zap },
     { id: "settings", label: "Settings", icon: SettingsIcon },
   ];
@@ -129,23 +162,30 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
         <div className="flex items-center gap-2 border-b border-border p-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base">🫘</div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base text-white">🫘</div>
           <div>
             <p className="text-sm font-bold leading-none">Admin Panel</p>
             <p className="text-[10px] text-muted-foreground">{initialSettings.brandName}</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 tab === t.id ? "bg-primary text-primary-foreground" : "text-foreground/70 hover:bg-muted hover:text-foreground"
               )}
             >
-              <t.icon size={17} /> {t.label}
+              <span className="flex items-center gap-2.5">
+                <t.icon size={17} /> {t.label}
+              </span>
+              {t.badge && t.badge > 0 ? (
+                <span className="rounded-full bg-destructive px-1.5 py-0.2 text-[10px] font-bold text-white">
+                  {t.badge}
+                </span>
+              ) : null}
             </button>
           ))}
         </nav>
@@ -162,13 +202,13 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="fixed left-3 top-20 z-50 md:hidden">
+          <Button variant="outline" size="icon" className="fixed left-3 top-4 z-50 md:hidden bg-card shadow-md">
             <Menu size={18} />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex items-center gap-2 border-b border-border p-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base">🫘</div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base text-white">🫘</div>
             <p className="text-sm font-bold">Admin Panel</p>
           </div>
           <nav className="space-y-1 p-3">
@@ -177,11 +217,18 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
                 key={t.id}
                 onClick={() => { setTab(t.id); setSidebarOpen(false); }}
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium",
+                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium",
                   tab === t.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                 )}
               >
-                <t.icon size={17} /> {t.label}
+                <span className="flex items-center gap-2.5">
+                  <t.icon size={17} /> {t.label}
+                </span>
+                {t.badge && t.badge > 0 ? (
+                  <span className="rounded-full bg-destructive px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {t.badge}
+                  </span>
+                ) : null}
               </button>
             ))}
             <button onClick={() => navigate("/")} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-muted">
@@ -198,10 +245,12 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
       <main className="flex-1 overflow-x-hidden p-4 pt-16 md:p-6 md:pt-6">
         {tab === "dashboard" && <DashboardView />}
         {tab === "products" && <ProductsView />}
-        {tab === "orders" && <OrdersView />}
+        {tab === "orders" && <OrdersView settings={initialSettings} />}
         {tab === "categories" && <CategoriesView />}
         {tab === "reviews" && <ReviewsView />}
         {tab === "coupons" && <CouponsView />}
+        {tab === "messages" && <MessagesView onUnreadChange={setUnreadMsgCount} />}
+        {tab === "subscribers" && <SubscribersView />}
         {tab === "integrations" && <IntegrationsView initialSettings={initialSettings} />}
         {tab === "settings" && <SettingsView initialSettings={initialSettings} />}
       </main>
@@ -238,9 +287,9 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-amber-50 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-3xl shadow-lg">🫘</div>
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-3xl text-white shadow-lg">🫘</div>
           <h1 className="font-playfair text-2xl font-bold">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Sign in to manage your store</p>
+          <p className="text-sm text-muted-foreground">Sign in to manage Satnam Singh Chana</p>
         </div>
         <Card className="shadow-lg">
           <CardContent className="p-6">
@@ -249,29 +298,37 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" placeholder="admin@satnamsinghchana.com" required />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@satnamsinghchana.com"
+                    className="pl-9"
+                    required
+                  />
                 </div>
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9" placeholder="••••••••" required />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-9"
+                    required
+                  />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full gap-2">
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : null}
                 Sign In
               </Button>
             </form>
-            <div className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              <p className="font-semibold">Default credentials:</p>
-              <p>Email: admin@satnamsinghchana.com</p>
-              <p>Password: satnam@2026</p>
-            </div>
-            <Button variant="ghost" className="mt-3 w-full" onClick={() => navigate("/")}>
-              ← Back to Store
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -283,16 +340,20 @@ function DashboardView() {
   const { data: stats, loading } = useAdminStats();
 
   if (loading || !stats) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const statCards = [
-    { label: "Total Revenue", value: formatINR(stats.totalRevenue), icon: IndianRupee, color: "text-emerald-600 bg-emerald-100" },
-    { label: "Total Orders", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-600 bg-blue-100" },
-    { label: "Products", value: stats.totalProducts, icon: Package, color: "text-purple-600 bg-purple-100" },
-    { label: "Reviews", value: stats.totalReviews, icon: Star, color: "text-amber-600 bg-amber-100" },
-    { label: "Pending Orders", value: stats.pendingOrders, icon: AlertTriangle, color: "text-orange-600 bg-orange-100" },
-    { label: "Low Stock", value: stats.lowStockProducts, icon: AlertTriangle, color: "text-red-600 bg-red-100" },
+    { label: "Total Revenue", value: formatINR(stats.totalRevenue), icon: IndianRupee, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: "Total Orders", value: stats.totalOrders, icon: ShoppingCart, color: "bg-blue-500/10 text-blue-600" },
+    { label: "Total Products", value: stats.totalProducts, icon: Package, color: "bg-amber-500/10 text-amber-600" },
+    { label: "Pending Orders", value: stats.pendingOrders, icon: AlertTriangle, color: "bg-orange-500/10 text-orange-600" },
+    { label: "Total Customers", value: stats.totalCustomers, icon: Users, color: "bg-purple-500/10 text-purple-600" },
+    { label: "Total Reviews", value: stats.totalReviews, icon: Star, color: "bg-yellow-500/10 text-yellow-600" },
   ];
 
   const maxSale = Math.max(...stats.salesByDay.map((d) => d.total), 1);
@@ -448,7 +509,12 @@ function ProductsView() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products..." className="pl-9" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products..."
+          className="pl-9"
+        />
       </div>
 
       {loading ? (
@@ -458,12 +524,12 @@ function ProductsView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px]">Product</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Sold</TableHead>
+                <TableHead>Rating</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -471,31 +537,38 @@ function ProductsView() {
               {filtered.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded bg-muted">
-                        {p.images[0] && <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />}
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
+                        <Image src={p.images[0] || "/products/roasted-chana-plain.png"} alt={p.name} fill className="object-contain p-1" />
                       </div>
-                      <span className="line-clamp-1 max-w-[180px] text-sm font-medium">{p.name}</span>
+                      <div>
+                        <p className="font-semibold text-sm line-clamp-1">{p.name}</p>
+                        <div className="flex gap-1 pt-0.5">
+                          {p.isFeatured && <Badge variant="secondary" className="text-[10px]">Featured</Badge>}
+                          {p.isDealOfDay && <Badge variant="destructive" className="text-[10px]">Deal</Badge>}
+                          {p.isBestseller && <Badge variant="outline" className="text-[10px]">Bestseller</Badge>}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{p.category?.name || "-"}</TableCell>
-                  <TableCell className="text-sm font-semibold">{formatINR(p.salePrice || p.price)}</TableCell>
-                  <TableCell className="text-sm">{p.stockQuantity}</TableCell>
+                  <TableCell className="text-xs">{p.category?.name}</TableCell>
                   <TableCell>
-                    <Badge variant={p.inStock ? "default" : "destructive"} className="text-[10px]">
-                      {p.inStock ? "In Stock" : "Out"}
+                    <span className="font-bold text-xs">{formatINR(p.salePrice || p.price)}</span>
+                    {p.salePrice && <span className="ml-1 text-[10px] text-muted-foreground line-through">{formatINR(p.price)}</span>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={p.inStock && p.stockQuantity > 5 ? "outline" : "destructive"} className="text-[10px]">
+                      {p.inStock ? `${p.stockQuantity} in stock` : "Out of stock"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.soldCount}</TableCell>
+                  <TableCell className="text-xs">{p.soldCount}</TableCell>
+                  <TableCell className="text-xs">⭐ {p.rating.toFixed(1)} ({p.reviewCount})</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/product/${p.slug}`)} title="View">
-                        <Eye size={14} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(p); setShowForm(true); }} title="Edit">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(p); setShowForm(true); }}>
                         <Edit size={14} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(p.slug)} title="Delete">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(p.slug)}>
                         <Trash2 size={14} />
                       </Button>
                     </div>
@@ -508,75 +581,119 @@ function ProductsView() {
       )}
 
       {showForm && (
-        <ProductForm
+        <ProductFormDialog
           product={editing}
           onClose={() => { setShowForm(false); setEditing(null); }}
-          onSaved={() => { setShowForm(false); setEditing(null); refetch(); }}
+          onSuccess={() => { setShowForm(false); setEditing(null); refetch(); }}
         />
       )}
     </div>
   );
 }
 
-function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: () => void }) {
+function ProductFormDialog({
+  product,
+  onClose,
+  onSuccess,
+}: {
+  product: Product | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const { data: categories } = useCategories();
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     name: product?.name || "",
     slug: product?.slug || "",
     shortDescription: product?.shortDescription || "",
     description: product?.description || "",
     categoryId: product?.categoryId || categories?.[0]?.id || "",
-    price: product?.price?.toString() || "",
+    price: product?.price?.toString() || "195",
     salePrice: product?.salePrice?.toString() || "",
-    weight: product?.weight || "",
+    weight: product?.weight || "360G",
     stockQuantity: product?.stockQuantity?.toString() || "50",
     inStock: product?.inStock ?? true,
     isFeatured: product?.isFeatured ?? false,
     isDealOfDay: product?.isDealOfDay ?? false,
     isBestseller: product?.isBestseller ?? false,
     isNew: product?.isNew ?? false,
-    tags: product?.tags?.join(", ") || "",
+    images: (product?.images || []).join("\n"),
+    tags: (product?.tags || []).join(", "),
     ingredients: product?.ingredients || "",
-    benefits: product?.benefits?.join("\n") || "",
-    shelfLife: product?.shelfLife || "6 Months",
-    storageInfo: product?.storageInfo || "",
-    images: product?.images?.join("\n") || "/products/roasted-chana-plain.png",
+    benefits: (product?.benefits || []).join("\n"),
+    shelfLife: product?.shelfLife || "9 Months",
+    storageInfo: product?.storageInfo || "Store in a cool dry place",
   });
-  const [saving, setSaving] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      // Add to images list
+      const existing = form.images.trim().split("\n").filter(Boolean);
+      const updated = [...existing, data.url].join("\n");
+      setForm({ ...form, images: updated });
+      toast.success("Image uploaded successfully! 📸");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const imageList = form.images.trim().split("\n").filter(Boolean);
+
+  const presetImages = [
+    "/products/roasted-chana-plain.png",
+    "/products/roasted-peanuts-salted.png",
+    "/products/flavored-chana.png",
+    "/products/flavored-peanuts.png",
+    "/products/combo-pack.png",
+    "/products/chikki.png",
+  ];
 
   const save = async () => {
+    if (!form.name || !form.price || !form.categoryId) {
+      return toast.error("Please fill required fields (Name, Price, Category)");
+    }
     setSaving(true);
     try {
-      const body = {
-        name: form.name,
-        slug: form.slug || slugify(form.name),
-        shortDescription: form.shortDescription,
-        description: form.description,
-        categoryId: form.categoryId,
+      const payload = {
+        ...form,
         price: Number(form.price),
         salePrice: form.salePrice ? Number(form.salePrice) : null,
-        weight: form.weight,
-        stockQuantity: Number(form.stockQuantity),
-        inStock: form.inStock,
-        isFeatured: form.isFeatured,
-        isDealOfDay: form.isDealOfDay,
-        isBestseller: form.isBestseller,
-        isNew: form.isNew,
+        stockQuantity: Number(form.stockQuantity || 0),
+        images: imageList,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        ingredients: form.ingredients,
         benefits: form.benefits.split("\n").map((b) => b.trim()).filter(Boolean),
-        shelfLife: form.shelfLife,
-        storageInfo: form.storageInfo,
-        images: form.images.split("\n").map((i) => i.trim()).filter(Boolean),
       };
+
       const url = product ? `/api/products/${product.slug}` : "/api/products";
       const method = product ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error("Failed");
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to save product");
       toast.success(product ? "Product updated" : "Product created");
-      onSaved();
-    } catch {
-      toast.error("Failed to save product");
+      onSuccess();
+    } catch (e) {
+      toast.error((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -586,16 +703,16 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add New Product"}</DialogTitle>
+          <DialogTitle>{product ? "Edit Product" : "New Product"}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-3 py-2 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 text-xs">
           <div className="sm:col-span-2">
-            <Label>Name *</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })} />
-          </div>
-          <div>
-            <Label>Slug</Label>
-            <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+            <Label>Product Name *</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value, slug: form.slug || slugify(e.target.value) })}
+              placeholder="e.g. Hing Jeera Roasted Chana"
+            />
           </div>
           <div>
             <Label>Category *</Label>
@@ -612,7 +729,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           </div>
           <div>
             <Label>Sale Price (₹)</Label>
-            <Input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+            <Input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} placeholder="Discounted price" />
           </div>
           <div>
             <Label>Weight</Label>
@@ -630,13 +747,90 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
             <Label>Full Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
           </div>
-          <div className="sm:col-span-2">
-            <Label>Images (one URL per line)</Label>
-            <Textarea value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} rows={3} placeholder="/products/roasted-chana-plain.png" />
+
+          {/* Product Image Uploader */}
+          <div className="sm:col-span-2 rounded-xl border border-border bg-muted/20 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="font-bold flex items-center gap-1.5">
+                <ImageIcon size={14} className="text-primary" /> Product Images
+              </Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="h-7 gap-1 text-xs"
+              >
+                {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                Upload Image
+              </Button>
+            </div>
+
+            {/* Image preview grid */}
+            {imageList.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {imageList.map((imgUrl, idx) => (
+                  <div key={idx} className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-card">
+                    <Image src={imgUrl} alt="Preview" fill className="object-contain p-1" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = imageList.filter((_, i) => i !== idx).join("\n");
+                        setForm({ ...form, images: updated });
+                      }}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-destructive text-white p-0.5 hover:opacity-80"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Preset selector */}
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1 font-semibold">Or pick from sample presets:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {presetImages.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      if (!imageList.includes(preset)) {
+                        setForm({ ...form, images: [...imageList, preset].join("\n") });
+                      }
+                    }}
+                    className="rounded border border-border bg-card px-2 py-0.5 text-[10px] hover:border-primary"
+                  >
+                    + {preset.split("/").pop()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-[11px] text-muted-foreground">Image URLs (one per line):</Label>
+              <Textarea
+                value={form.images}
+                onChange={(e) => setForm({ ...form, images: e.target.value })}
+                rows={2}
+                placeholder="/products/roasted-chana-plain.png"
+                className="text-xs font-mono"
+              />
+            </div>
           </div>
+
           <div>
             <Label>Tags (comma separated)</Label>
-            <Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+            <Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="spicy, roasted, combo" />
           </div>
           <div>
             <Label>Shelf Life</Label>
@@ -648,7 +842,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           </div>
           <div className="sm:col-span-2">
             <Label>Benefits (one per line)</Label>
-            <Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={3} />
+            <Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={2} />
           </div>
           <div className="sm:col-span-2">
             <Label>Storage Info</Label>
@@ -662,7 +856,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
               { k: "isBestseller" as const, l: "Bestseller" },
               { k: "isNew" as const, l: "New Arrival" },
             ].map((f) => (
-              <label key={f.k} className="flex items-center gap-2 text-sm">
+              <label key={f.k} className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                 <Switch checked={form[f.k]} onCheckedChange={(v) => setForm({ ...form, [f.k]: v })} />
                 {f.l}
               </label>
@@ -673,7 +867,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button onClick={save} disabled={saving} className="flex-1 gap-2">
             {saving ? <Loader2 size={15} className="animate-spin" /> : null}
-            {product ? "Update" : "Create"}
+            {product ? "Update Product" : "Create Product"}
           </Button>
         </div>
       </DialogContent>
@@ -681,10 +875,19 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   );
 }
 
-function OrdersView() {
+function OrdersView({ settings }: { settings: Settings }) {
   const [status, setStatus] = useState("all");
   const { data: orders, loading, refetch } = useAdminOrders(status === "all" ? undefined : status);
   const [selected, setSelected] = useState<Order | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [courierNotes, setCourierNotes] = useState("");
+  const [updatingNotes, setUpdatingNotes] = useState(false);
+
+  useEffect(() => {
+    if (selected) {
+      setCourierNotes(selected.notes || "");
+    }
+  }, [selected]);
 
   const updateStatus = async (id: string, newStatus: string) => {
     const res = await fetch(`/api/orders/${id}`, {
@@ -698,6 +901,28 @@ function OrdersView() {
       if (selected?.id === id) setSelected({ ...selected, status: newStatus });
     } else {
       toast.error("Failed to update");
+    }
+  };
+
+  const saveCourierNotes = async (id: string) => {
+    setUpdatingNotes(true);
+    try {
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackingNumber: courierNotes }),
+      });
+      if (res.ok) {
+        toast.success("Courier & tracking info saved!");
+        refetch();
+        if (selected?.id === id) setSelected({ ...selected, notes: courierNotes });
+      } else {
+        toast.error("Failed to save tracking info");
+      }
+    } catch {
+      toast.error("Error saving tracking info");
+    } finally {
+      setUpdatingNotes(false);
     }
   };
 
@@ -758,7 +983,7 @@ function OrdersView() {
                 <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -767,7 +992,7 @@ function OrdersView() {
                   <TableCell className="font-mono text-xs font-semibold">{o.orderNumber}</TableCell>
                   <TableCell>
                     <p className="text-sm font-medium">{o.customerName}</p>
-                    <p className="text-xs text-muted-foreground">{o.email}</p>
+                    <p className="text-xs text-muted-foreground">{o.phone || o.email}</p>
                   </TableCell>
                   <TableCell className="font-bold">{formatINR(o.total)}</TableCell>
                   <TableCell>
@@ -785,7 +1010,26 @@ function OrdersView() {
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelected(o)}><Eye size={14} /></Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="Print Invoice"
+                        onClick={() => setInvoiceOrder(o)}
+                      >
+                        <Printer size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="View Details"
+                        onClick={() => setSelected(o)}
+                      >
+                        <Eye size={14} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -794,54 +1038,108 @@ function OrdersView() {
         </div>
       )}
 
+      {/* Order Details Modal */}
       {selected && (
         <Dialog open onOpenChange={() => setSelected(null)}>
           <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-            <DialogHeader><DialogTitle>Order {selected.orderNumber}</DialogTitle></DialogHeader>
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3">
+            <DialogHeader>
+              <div className="flex items-center justify-between pr-6">
+                <DialogTitle>Order #{selected.orderNumber}</DialogTitle>
+                <Badge className="text-xs">{selected.status}</Badge>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3">
                 <div>
-                  <p className="font-semibold">Customer</p>
-                  <p>{selected.customerName}</p>
-                  <p className="text-xs text-muted-foreground">{selected.email}</p>
-                  <p className="text-xs text-muted-foreground">{selected.phone}</p>
+                  <p className="font-bold text-foreground">Customer Details</p>
+                  <p className="font-medium text-sm">{selected.customerName}</p>
+                  <p className="text-muted-foreground">{selected.email}</p>
+                  <p className="text-muted-foreground">{selected.phone}</p>
                 </div>
                 <div>
-                  <p className="font-semibold">Shipping Address</p>
-                  <p className="text-xs">{selected.address}</p>
-                  <p className="text-xs">{selected.city}, {selected.state} - {selected.pincode}</p>
+                  <p className="font-bold text-foreground">Shipping Address</p>
+                  <p>{selected.address}</p>
+                  <p>{selected.city}, {selected.state} - {selected.pincode}</p>
                 </div>
               </div>
+
+              {/* Courier tracking section */}
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <Label className="font-bold text-primary flex items-center gap-1.5">
+                  <Truck size={13} /> Courier Partner & Tracking AWB Number
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={courierNotes}
+                    onChange={(e) => setCourierNotes(e.target.value)}
+                    placeholder="e.g. BlueDart AWB: 12345678 or Delhivery"
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={updatingNotes}
+                    onClick={() => saveCourierNotes(selected.id)}
+                    className="h-8 px-3"
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+
               <div>
-                <p className="font-semibold">Items</p>
-                <div className="space-y-1 rounded-lg border border-border p-2">
+                <p className="font-bold mb-2">Order Items ({selected.items.length})</p>
+                <div className="space-y-1.5 rounded-lg border border-border p-2.5">
                   {selected.items.map((i) => (
-                    <div key={i.id} className="flex justify-between text-xs">
+                    <div key={i.id} className="flex justify-between items-center text-xs">
                       <span>{i.name} × {i.quantity}{i.weight ? ` (${i.weight})` : ""}</span>
                       <span className="font-semibold">{formatINR(i.total)}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="flex justify-between border-t pt-2">
-                <span className="font-bold">Total</span>
-                <span className="font-bold text-primary">{formatINR(selected.total)}</span>
+
+              <div className="rounded-lg bg-muted/40 p-3 space-y-1">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatINR(selected.subtotal)}</span>
+                </div>
+                {selected.discount > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Discount</span>
+                    <span>-{formatINR(selected.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Shipping Fee</span>
+                  <span>{selected.shipping === 0 ? "FREE" : formatINR(selected.shipping)}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-1 font-bold text-sm">
+                  <span>Total</span>
+                  <span className="text-primary">{formatINR(selected.total)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
+
+              <div className="flex justify-between text-muted-foreground">
                 <span>Payment: {selected.paymentMethod} ({selected.paymentStatus})</span>
                 <span>{formatDate(selected.createdAt)}</span>
               </div>
-              {selected.razorpayPaymentId && (
-                <p className="text-xs text-muted-foreground">Payment ID: {selected.razorpayPaymentId}</p>
-              )}
-              <div className="flex gap-2 border-t pt-3">
+
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setInvoiceOrder(selected)}
+                >
+                  <Printer size={14} /> Print Invoice
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
                   onClick={() => resendEmails(selected.id)}
                 >
-                  <Send size={14} /> Resend Order Emails
+                  <Send size={14} /> Resend Emails
                 </Button>
                 <Button
                   variant="ghost"
@@ -855,6 +1153,441 @@ function OrdersView() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Invoice Modal */}
+      {invoiceOrder && (
+        <InvoiceModal order={invoiceOrder} settings={settings} onClose={() => setInvoiceOrder(null)} />
+      )}
+    </div>
+  );
+}
+
+function InvoiceModal({
+  order,
+  settings,
+  onClose,
+}: {
+  order: Order;
+  settings: Settings;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto p-6">
+        <div id="printable-invoice" className="space-y-6 text-xs text-foreground">
+          {/* Header */}
+          <div className="flex justify-between border-b pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white font-bold">🫘</div>
+                <span className="font-playfair text-lg font-bold">{settings.brandName}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{settings.address}</p>
+              <p className="text-[11px] text-muted-foreground">Phone: {settings.phone} • Email: {settings.email}</p>
+            </div>
+            <div className="text-right">
+              <h2 className="font-playfair text-xl font-bold text-primary uppercase">TAX INVOICE</h2>
+              <p className="font-mono font-semibold">#{order.orderNumber}</p>
+              <p className="text-muted-foreground">Date: {formatDate(order.createdAt)}</p>
+            </div>
+          </div>
+
+          {/* Bill To */}
+          <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/20 p-3">
+            <div>
+              <p className="font-bold uppercase text-[10px] text-muted-foreground">Billed / Shipped To:</p>
+              <p className="font-semibold text-sm mt-0.5">{order.customerName}</p>
+              <p>{order.address}</p>
+              <p>{order.city}, {order.state} - {order.pincode}</p>
+              <p>Phone: {order.phone}</p>
+              <p>Email: {order.email}</p>
+            </div>
+            <div className="text-right space-y-1">
+              <p className="font-bold uppercase text-[10px] text-muted-foreground">Payment Details:</p>
+              <p>Method: <strong>{order.paymentMethod}</strong></p>
+              <p>Status: <strong className={order.paymentStatus === "PAID" ? "text-green-600" : "text-amber-600"}>{order.paymentStatus}</strong></p>
+              {order.notes && <p className="text-muted-foreground">Courier: {order.notes}</p>}
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/40 border-b">
+                <tr>
+                  <th className="p-2.5 font-semibold">Item Description</th>
+                  <th className="p-2.5 font-semibold text-center">Qty</th>
+                  <th className="p-2.5 font-semibold text-right">Price</th>
+                  <th className="p-2.5 font-semibold text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {order.items.map((item, i) => (
+                  <tr key={item.id || i}>
+                    <td className="p-2.5">
+                      <p className="font-semibold">{item.name}</p>
+                      {item.weight && <p className="text-[10px] text-muted-foreground">{item.weight}</p>}
+                    </td>
+                    <td className="p-2.5 text-center">{item.quantity}</td>
+                    <td className="p-2.5 text-right">{formatINR(item.price)}</td>
+                    <td className="p-2.5 text-right font-semibold">{formatINR(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="w-64 space-y-1 text-xs">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal (Inclusive of GST)</span>
+                <span>{formatINR(order.subtotal)}</span>
+              </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-destructive">
+                  <span>Coupon Discount</span>
+                  <span>-{formatINR(order.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping & Handling</span>
+                <span>{order.shipping === 0 ? "FREE" : formatINR(order.shipping)}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1 font-bold text-sm">
+                <span>Grand Total</span>
+                <span className="text-primary">{formatINR(order.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer declaration */}
+          <div className="border-t pt-4 text-[10px] text-muted-foreground text-center">
+            <p>Thank you for choosing Satnam Singh Chana! Taste of Tradition, 100% Quality Guaranteed.</p>
+            <p className="mt-1">This is a computer-generated invoice and does not require a physical signature.</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t pt-4">
+          <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => window.print()}>
+            <Printer size={14} /> Print Invoice
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MessagesView({ onUnreadChange }: { onUnreadChange?: (count: number) => void }) {
+  const [status, setStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMsg, setSelectedMsg] = useState<any | null>(null);
+
+  const fetchMessages = async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams();
+      if (status !== "all") q.set("status", status);
+      if (search) q.set("search", search);
+
+      const res = await fetch(`/api/admin/contact?${q.toString()}`);
+      const data = await res.json();
+      if (res.ok) {
+        setMessages(data.messages || []);
+        onUnreadChange?.(data.unreadCount || 0);
+      }
+    } catch {
+      toast.error("Failed to load messages");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, [status]);
+
+  const toggleRead = async (id: string, isRead: boolean) => {
+    const res = await fetch("/api/admin/contact", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isRead: !isRead }),
+    });
+    if (res.ok) {
+      toast.success(isRead ? "Marked as unread" : "Marked as read");
+      fetchMessages();
+      if (selectedMsg?.id === id) {
+        setSelectedMsg({ ...selectedMsg, isRead: !isRead });
+      }
+    }
+  };
+
+  const deleteMsg = async (id: string) => {
+    if (!confirm("Delete this inquiry?")) return;
+    const res = await fetch(`/api/admin/contact?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Inquiry deleted");
+      fetchMessages();
+      if (selectedMsg?.id === id) setSelectedMsg(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-playfair text-2xl font-bold">Customer Inquiries</h1>
+          <p className="text-sm text-muted-foreground">{messages.length} messages</p>
+        </div>
+        <div className="flex gap-2">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Inquiries</SelectItem>
+              <SelectItem value="unread">Unread Only</SelectItem>
+              <SelectItem value="read">Read Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          fetchMessages();
+        }}
+        className="relative"
+      >
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by customer name, email, subject, phone..."
+          className="pl-9"
+        />
+      </form>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : messages.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          No customer inquiries found
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {messages.map((m) => (
+                <TableRow key={m.id} className={m.isRead ? "" : "bg-primary/5 font-medium"}>
+                  <TableCell>
+                    <p className="font-semibold text-xs">{m.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{m.email}</p>
+                    {m.phone && <p className="text-[10px] text-muted-foreground">{m.phone}</p>}
+                  </TableCell>
+                  <TableCell className="text-xs font-semibold max-w-[150px] truncate">{m.subject}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[250px] truncate">{m.message}</TableCell>
+                  <TableCell>
+                    <Badge variant={m.isRead ? "outline" : "default"} className="text-[10px]">
+                      {m.isRead ? "Read" : "New"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDate(m.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="View details"
+                        onClick={() => {
+                          setSelectedMsg(m);
+                          if (!m.isRead) toggleRead(m.id, false);
+                        }}
+                      >
+                        <Eye size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        title="Delete"
+                        onClick={() => deleteMsg(m.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Message Modal */}
+      {selectedMsg && (
+        <Dialog open onOpenChange={() => setSelectedMsg(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base">{selectedMsg.subject}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 text-xs">
+              <div className="rounded-lg bg-muted/40 p-3 space-y-1">
+                <p><strong>From:</strong> {selectedMsg.name} ({selectedMsg.email})</p>
+                {selectedMsg.phone && <p><strong>Phone:</strong> {selectedMsg.phone}</p>}
+                <p><strong>Date:</strong> {formatDate(selectedMsg.createdAt)}</p>
+              </div>
+
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-bold mb-1 text-muted-foreground uppercase text-[10px]">Message:</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{selectedMsg.message}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <a
+                  href={`mailto:${selectedMsg.email}?subject=Re: ${encodeURIComponent(selectedMsg.subject)}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Mail size={13} /> Reply via Email
+                </a>
+                {selectedMsg.phone && (
+                  <a
+                    href={`tel:${selectedMsg.phone}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                  >
+                    <PhoneCall size={13} /> Call Customer
+                  </a>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleRead(selectedMsg.id, selectedMsg.isRead)}
+                  className="ml-auto text-xs"
+                >
+                  {selectedMsg.isRead ? "Mark Unread" : "Mark Read"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+function SubscribersView() {
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const fetchSubscribers = async () => {
+    setLoading(true);
+    try {
+      const q = search ? `?search=${encodeURIComponent(search)}` : "";
+      const res = await fetch(`/api/admin/newsletter${q}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSubscribers(data.subscribers || []);
+      }
+    } catch {
+      toast.error("Failed to load subscribers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscribers();
+  }, []);
+
+  const deleteSub = async (id: string) => {
+    if (!confirm("Remove this subscriber?")) return;
+    const res = await fetch(`/api/admin/newsletter?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Subscriber removed");
+      fetchSubscribers();
+    }
+  };
+
+  const exportCSV = () => {
+    window.open("/api/admin/newsletter?format=csv", "_blank");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-playfair text-2xl font-bold">Newsletter Subscribers</h1>
+          <p className="text-sm text-muted-foreground">{subscribers.length} total subscribers</p>
+        </div>
+        <Button onClick={exportCSV} className="gap-2" variant="outline">
+          <Download size={15} /> Export to CSV
+        </Button>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          fetchSubscribers();
+        }}
+        className="relative"
+      >
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search subscriber emails..."
+          className="pl-9"
+        />
+      </form>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : subscribers.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          No subscribers found
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email Address</TableHead>
+                <TableHead>Subscribed Date</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subscribers.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium text-xs flex items-center gap-2">
+                    <Mail size={14} className="text-primary" /> {s.email}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDate(s.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteSub(s.id)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
@@ -899,19 +1632,28 @@ function CategoriesView() {
           </Card>
         ))}
       </div>
+
       {showForm && (
         <Dialog open onOpenChange={() => setShowForm(false)}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Category</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>New Category</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Icon (emoji)</Label><Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} /></div>
-                <div><Label>Color</Label><Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} /></div>
+              <div>
+                <Label>Category Name</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
-              <div><Label>Image URL</Label><Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="/products/..." /></div>
-              <div className="flex gap-2"><Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button><Button onClick={create} className="flex-1">Create</Button></div>
+              <div>
+                <Label>Icon Emoji</Label>
+                <Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="📦" />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button>
+                <Button onClick={create} className="flex-1">Create Category</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -924,53 +1666,81 @@ function ReviewsView() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchReviews = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/reviews?approved=all");
+      const d = await res.json();
+      setReviews(d.reviews || []);
+    } catch {
+      toast.error("Failed to load reviews");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/reviews?approvedOnly=false").then((r) => r.json()).then((d) => { setReviews(d); setLoading(false); });
+    fetchReviews();
   }, []);
 
   const toggleApprove = async (id: string, approved: boolean) => {
-    await fetch("/api/reviews", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, approved }) });
-    setReviews((r) => r.map((x) => (x.id === id ? { ...x, approved } : x)));
-    toast.success(approved ? "Review approved" : "Review hidden");
+    await fetch("/api/reviews", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, approved: !approved }),
+    });
+    toast.success(approved ? "Review unapproved" : "Review approved");
+    fetchReviews();
   };
 
-  const del = async (id: string) => {
-    if (!confirm("Delete this review?")) return;
+  const deleteReview = async (id: string) => {
+    if (!confirm("Delete review?")) return;
     await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
-    setReviews((r) => r.filter((x) => x.id !== id));
     toast.success("Review deleted");
+    fetchReviews();
   };
 
   return (
     <div className="space-y-4">
-      <h1 className="font-playfair text-2xl font-bold">Reviews</h1>
+      <div>
+        <h1 className="font-playfair text-2xl font-bold">Reviews</h1>
+        <p className="text-sm text-muted-foreground">Moderate customer feedback</p>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      ) : reviews.length === 0 ? (
-        <p className="rounded-lg border border-dashed py-16 text-center text-sm text-muted-foreground">No reviews yet</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {reviews.map((r) => (
-            <div key={r.id} className="rounded-lg border border-border bg-card p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold">{r.customerName}</p>
-                    <StarRating rating={r.rating} size={12} />
-                    <Badge variant={r.approved ? "default" : "secondary"} className="text-[10px]">{r.approved ? "Approved" : "Hidden"}</Badge>
+            <Card key={r.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <StarRating rating={r.rating} size={14} />
+                      <span className="font-bold text-sm">{r.title || "Review"}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{r.comment}</p>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      By <strong>{r.customerName}</strong> for <em>{r.product?.name}</em> • {formatDate(r.createdAt)}
+                    </p>
                   </div>
-                  {r.title && <p className="text-sm font-medium">{r.title}</p>}
-                  <p className="text-sm text-muted-foreground">{r.comment}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(r.createdAt)}</p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant={r.approved ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => toggleApprove(r.id, r.approved)}
+                    >
+                      {r.approved ? "Approved" : "Pending"}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteReview(r.id)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleApprove(r.id, !r.approved)} title={r.approved ? "Hide" : "Approve"}>
-                    {r.approved ? <XCircle size={14} /> : <Check size={14} />}
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => del(r.id)}><Trash2 size={14} /></Button>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
@@ -981,88 +1751,105 @@ function ReviewsView() {
 function CouponsView() {
   const { data: coupons, refetch } = useAdminCoupons();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ code: "", description: "", type: "PERCENTAGE", value: "", minOrder: "0", maxDiscount: "", usageLimit: "100" });
+  const [form, setForm] = useState({
+    code: "",
+    description: "",
+    type: "PERCENTAGE",
+    value: "10",
+    minOrder: "0",
+    maxDiscount: "",
+    usageLimit: "100",
+  });
 
   const create = async () => {
+    if (!form.code || !form.value) return toast.error("Code & value required");
     const res = await fetch("/api/coupons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        code: form.code.toUpperCase(),
-        description: form.description,
-        type: form.type,
+        ...form,
         value: Number(form.value),
-        minOrder: Number(form.minOrder),
+        minOrder: Number(form.minOrder || 0),
         maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : null,
-        usageLimit: Number(form.usageLimit),
+        usageLimit: Number(form.usageLimit || 100),
       }),
     });
     if (res.ok) {
       toast.success("Coupon created");
       setShowForm(false);
-      setForm({ code: "", description: "", type: "PERCENTAGE", value: "", minOrder: "0", maxDiscount: "", usageLimit: "100" });
       refetch();
     }
-  };
-
-  const del = async (id: string) => {
-    if (!confirm("Delete this coupon?")) return;
-    await fetch(`/api/coupons?id=${id}`, { method: "DELETE" });
-    refetch();
-    toast.success("Coupon deleted");
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-playfair text-2xl font-bold">Coupons</h1>
+        <div>
+          <h1 className="font-playfair text-2xl font-bold">Coupons</h1>
+          <p className="text-sm text-muted-foreground">{coupons?.length || 0} active codes</p>
+        </div>
         <Button onClick={() => setShowForm(true)} className="gap-2"><Plus size={16} /> Add Coupon</Button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Min Order</TableHead>
-              <TableHead>Usage</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(coupons || []).map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-mono font-bold">{c.code}</TableCell>
-                <TableCell className="text-xs">{c.type}</TableCell>
-                <TableCell className="text-sm">{c.type === "PERCENTAGE" ? `${c.value}%` : formatINR(c.value)}</TableCell>
-                <TableCell className="text-sm">{formatINR(c.minOrder)}</TableCell>
-                <TableCell className="text-xs">{c.usageCount}/{c.usageLimit}</TableCell>
-                <TableCell><Badge variant={c.isActive ? "default" : "secondary"} className="text-[10px]">{c.isActive ? "Active" : "Inactive"}</Badge></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => del(c.id)}><Trash2 size={14} /></Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(coupons || []).map((c) => (
+          <Card key={c.id}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-base font-bold text-primary">{c.code}</span>
+                <Badge variant={c.isActive ? "default" : "secondary"}>
+                  {c.type === "PERCENTAGE" ? `${c.value}% OFF` : `₹${c.value} OFF`}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{c.description || "Discount code"}</p>
+              <div className="mt-3 flex justify-between text-[11px] text-muted-foreground border-t pt-2">
+                <span>Min Order: {formatINR(c.minOrder)}</span>
+                <span>Used: {c.usageCount}/{c.usageLimit}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
       {showForm && (
         <Dialog open onOpenChange={() => setShowForm(false)}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Coupon</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>Code *</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SUMMER20" /></div>
-              <div><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Type</Label><Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PERCENTAGE">Percentage</SelectItem><SelectItem value="FLAT">Flat Amount</SelectItem></SelectContent></Select></div>
-                <div><Label>Value *</Label><Input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder={form.type === "PERCENTAGE" ? "10" : "50"} /></div>
+            <DialogHeader><DialogTitle>New Coupon</DialogTitle></DialogHeader>
+            <div className="space-y-3 text-xs">
+              <div>
+                <Label>Coupon Code *</Label>
+                <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="e.g. SAVE20" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Min Order (₹)</Label><Input type="number" value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} /></div>
-                <div><Label>Max Discount (₹)</Label><Input type="number" value={form.maxDiscount} onChange={(e) => setForm({ ...form, maxDiscount: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Discount Type</Label>
+                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
+                      <SelectItem value="FLAT">Flat Amount (₹)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Value *</Label>
+                  <Input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+                </div>
               </div>
-              <div><Label>Usage Limit</Label><Input type="number" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: e.target.value })} /></div>
-              <div className="flex gap-2"><Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button><Button onClick={create} className="flex-1">Create</Button></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Min Order (₹)</Label>
+                  <Input type="number" value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Usage Limit</Label>
+                  <Input type="number" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button>
+                <Button onClick={create} className="flex-1">Create Coupon</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -1071,199 +1858,46 @@ function CouponsView() {
   );
 }
 
-function SettingsView({ initialSettings }: { initialSettings: Settings }) {
-  const [settings, setSettings] = useState<Settings>(initialSettings);
-  const [saving, setSaving] = useState(false);
-  const [emailConfigured, setEmailConfigured] = useState(false);
-  const [razorpayConfigured, setRazorpayConfigured] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then((d) => {
-      setSettings(d);
-      setEmailConfigured(d.emailConfigured);
-      setRazorpayConfigured(d.razorpayConfigured);
-    });
-  }, []);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setSettings(d);
-        setEmailConfigured(d.emailConfigured);
-        setRazorpayConfigured(d.razorpayConfigured);
-        toast.success("Settings saved! 🎉");
-      }
-    } catch {
-      toast.error("Failed to save settings");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="max-w-3xl space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-playfair text-2xl font-bold">Store Settings</h1>
-          <p className="text-sm text-muted-foreground">Manage your store information, shipping & social links.</p>
-        </div>
-      </div>
-
-      {/* Integration status quick-cards */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card className={cn(emailConfigured ? "border-emerald-200" : "border-amber-200")}>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", emailConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
-              {emailConfigured ? <Check size={20} /> : <AlertTriangle size={20} />}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold">Gmail SMTP</p>
-              <p className="text-xs text-muted-foreground">{emailConfigured ? "Configured & ready" : "Not configured"}</p>
-            </div>
-            <Mail size={16} className="text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card className={cn(razorpayConfigured ? "border-emerald-200" : "border-amber-200")}>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", razorpayConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
-              {razorpayConfigured ? <Check size={20} /> : <AlertTriangle size={20} />}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold">Razorpay</p>
-              <p className="text-xs text-muted-foreground">{razorpayConfigured ? "Configured & ready" : "Demo mode only"}</p>
-            </div>
-            <CreditCard size={16} className="text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <p className="flex items-center gap-2 text-sm text-foreground">
-          <Zap size={16} className="text-primary" />
-          <span><strong>Email & Payment Gateway</strong> can now be configured directly from the <strong>Integrations</strong> tab — no need to edit <code className="rounded bg-background px-1 text-xs">.env</code>!</span>
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Store Information</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div><Label>Brand Name</Label><Input value={settings.brandName} onChange={(e) => setSettings({ ...settings, brandName: e.target.value })} /></div>
-            <div><Label>Tagline</Label><Input value={settings.tagline} onChange={(e) => setSettings({ ...settings, tagline: e.target.value })} /></div>
-          </div>
-          <div><Label>Email (display)</Label><Input value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })} /></div>
-          <div><Label>Phone</Label><Input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone: e.target.value })} /></div>
-          <div><Label>Address</Label><Textarea value={settings.address} onChange={(e) => setSettings({ ...settings, address: e.target.value })} rows={2} /></div>
-          <div><Label>Announcement Bar Text</Label><Input value={settings.announcementBar} onChange={(e) => setSettings({ ...settings, announcementBar: e.target.value })} /></div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Shipping</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Free Shipping Threshold (₹)</Label><Input type="number" value={settings.freeShippingThreshold} onChange={(e) => setSettings({ ...settings, freeShippingThreshold: Number(e.target.value) })} /></div>
-          <div><Label>Shipping Fee (₹)</Label><Input type="number" value={settings.shippingFee} onChange={(e) => setSettings({ ...settings, shippingFee: Number(e.target.value) })} /></div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Social Links</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Facebook</Label><Input value={settings.facebook} onChange={(e) => setSettings({ ...settings, facebook: e.target.value })} /></div>
-          <div><Label>Instagram</Label><Input value={settings.instagram} onChange={(e) => setSettings({ ...settings, instagram: e.target.value })} /></div>
-          <div><Label>Twitter / X</Label><Input value={settings.twitter} onChange={(e) => setSettings({ ...settings, twitter: e.target.value })} /></div>
-          <div><Label>LinkedIn</Label><Input value={settings.linkedin} onChange={(e) => setSettings({ ...settings, linkedin: e.target.value })} /></div>
-        </CardContent>
-      </Card>
-
-      <Button onClick={save} disabled={saving} className="gap-2">
-        {saving ? <Loader2 size={16} className="animate-spin" /> : null}
-        Save Settings
-      </Button>
-    </div>
-  );
-}
-
-// ============================================================
-// INTEGRATIONS VIEW — Configure Email & Payment Gateway from UI
-// ============================================================
 function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
   const [settings, setSettings] = useState<Settings>(initialSettings);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [emailConfigured, setEmailConfigured] = useState(false);
-  const [razorpayConfigured, setRazorpayConfigured] = useState(false);
-  const [testingEmail, setTestingEmail] = useState(false);
   const [testingRazorpay, setTestingRazorpay] = useState(false);
-  const [showEmailPass, setShowEmailPass] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
   const [showRzpSecret, setShowRzpSecret] = useState(false);
+  const [showEmailPass, setShowEmailPass] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        setSettings(d);
-        setEmailConfigured(d.emailConfigured);
-        setRazorpayConfigured(d.razorpayConfigured);
-        setLoading(false);
+        if (d?.settings) setSettings(d.settings);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
-  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((s) => ({ ...s, [key]: value }));
+  const update = <K extends keyof Settings>(k: K, v: Settings[K]) => {
+    setSettings((s) => ({ ...s, [k]: v }));
   };
 
-  const saveSettings = async (patch?: Partial<Settings>) => {
+  const saveSettings = async (override?: Partial<Settings>) => {
     setSaving(true);
     try {
+      const payload = { ...settings, ...(override || {}) };
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch || settings),
+        body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        const d = await res.json();
-        setSettings(d);
-        setEmailConfigured(d.emailConfigured);
-        setRazorpayConfigured(d.razorpayConfigured);
-        toast.success("Settings saved! 🎉");
-      } else {
-        toast.error("Failed to save");
-      }
-    } catch {
-      toast.error("Failed to save");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      if (data.settings) setSettings(data.settings);
+      toast.success("✅ Configuration saved!");
+      return data.settings;
+    } catch (e) {
+      toast.error((e as Error).message);
+      return null;
     } finally {
       setSaving(false);
-    }
-  };
-
-  const testEmail = async () => {
-    setTestingEmail(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "test-email", settings }),
-      });
-      const d = await res.json();
-      if (d.ok) {
-        toast.success(d.message);
-        setEmailConfigured(true);
-      } else {
-        toast.error(d.message);
-      }
-    } catch {
-      toast.error("Test failed — check server logs");
-    } finally {
-      setTestingEmail(false);
     }
   };
 
@@ -1273,80 +1907,93 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "test-razorpay", settings }),
+        body: JSON.stringify({
+          action: "test-razorpay",
+          razorpayKeyId: settings.razorpayKeyId,
+          razorpayKeySecret: settings.razorpayKeySecret,
+        }),
       });
-      const d = await res.json();
-      if (d.ok) {
-        toast.success(d.message);
-        setRazorpayConfigured(true);
-      } else {
-        toast.error(d.message);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Connection failed");
       }
-    } catch {
-      toast.error("Test failed — check server logs");
+      toast.success(data.message || "✅ Razorpay keys verified! Connection working.");
+    } catch (e) {
+      toast.error(`❌ Razorpay test failed: ${(e as Error).message}`);
     } finally {
       setTestingRazorpay(false);
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
-  }
+  const testEmail = async () => {
+    setTestingEmail(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test-email",
+          gmailUser: settings.gmailUser,
+          gmailAppPassword: settings.gmailAppPassword,
+          storeNotifyEmail: settings.storeNotifyEmail,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Test email failed");
+      }
+      toast.success(data.message || "📧 Test email sent successfully! Check your inbox.");
+    } catch (e) {
+      toast.error(`❌ Email test failed: ${(e as Error).message}`);
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+  const rzpConfigured = Boolean(settings.razorpayKeyId && settings.razorpayKeySecret);
+  const emailConfigured = Boolean(settings.gmailUser && settings.gmailAppPassword);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="font-playfair text-2xl font-bold">Integrations</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure your payment gateway & email service here. Changes are saved to the database and take effect instantly — no need to restart the server or edit <code className="rounded bg-muted px-1 text-xs">.env</code>.
-        </p>
+        <p className="text-sm text-muted-foreground">Configure Payment Gateway & Email Service from here.</p>
       </div>
 
-      {/* ============ PAYMENT GATEWAY (Razorpay) ============ */}
-      <Card className={cn("overflow-hidden", razorpayConfigured ? "border-emerald-200" : "border-amber-200")}>
+      {/* RAZORPAY */}
+      <Card className={cn("overflow-hidden", rzpConfigured ? "border-emerald-200" : "border-amber-200")}>
         <CardHeader className="border-b border-border bg-muted/30 pb-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", razorpayConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
+              <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", rzpConfigured ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
                 <CreditCard size={22} />
               </div>
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  Payment Gateway
-                  <Badge variant={razorpayConfigured ? "default" : "secondary"} className="text-[10px]">
-                    {razorpayConfigured ? "● Live" : "● Demo Mode"}
+                  Razorpay Payment Gateway
+                  <Badge variant={rzpConfigured ? "default" : "secondary"} className="text-[10px]">
+                    {rzpConfigured ? "● Live / Configured" : "● Demo Mode"}
                   </Badge>
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Razorpay — accept cards, UPI, net banking & wallets</p>
+                <p className="text-xs text-muted-foreground">Accept Cards, UPI, Netbanking, & Wallets</p>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-xs font-medium">
+            <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
               <Switch checked={settings.paymentEnabled} onCheckedChange={(v) => update("paymentEnabled", v)} />
               {settings.paymentEnabled ? "Enabled" : "Disabled"}
             </label>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          {!razorpayConfigured && (
-            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              <Info size={14} className="mt-0.5 shrink-0" />
-              <div>
-                <p className="font-semibold">Demo mode is active.</p>
-                <p>Online payments will use a mock order. Add your Razorpay keys below to accept real payments. Get your keys from the Razorpay Dashboard → API Keys.</p>
-              </div>
-            </div>
-          )}
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label className="flex items-center gap-1.5 text-xs"><KeyRound size={12} /> Key ID <span className="text-destructive">*</span></Label>
               <Input
                 value={settings.razorpayKeyId}
                 onChange={(e) => update("razorpayKeyId", e.target.value)}
-                placeholder="rzp_live_xxxxxxxxxxxx"
+                placeholder="rzp_live_... or rzp_test_..."
                 className="mt-1 font-mono text-xs"
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">Public key — safe to expose on client. Starts with <code>rzp_live_</code> or <code>rzp_test_</code>.</p>
             </div>
             <div>
               <Label className="flex items-center gap-1.5 text-xs"><Lock size={12} /> Key Secret <span className="text-destructive">*</span></Label>
@@ -1355,40 +2002,37 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
                   type={showRzpSecret ? "text" : "password"}
                   value={settings.razorpayKeySecret}
                   onChange={(e) => update("razorpayKeySecret", e.target.value)}
-                  placeholder="Enter your Razorpay key secret"
+                  placeholder="Enter secret"
                   className="pr-9 font-mono text-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowRzpSecret((s) => !s)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label="Toggle visibility"
                 >
                   {showRzpSecret ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Secret key — stored encrypted in DB. Never share publicly.</p>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label className="text-xs">UPI ID (optional)</Label>
+              <Label className="text-xs">UPI ID / VPA (Optional)</Label>
               <Input
                 value={settings.upiId}
                 onChange={(e) => update("upiId", e.target.value)}
-                placeholder="yourname@upi"
+                placeholder="satnamchana@upi"
                 className="mt-1 text-xs"
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">Shown to customers as an alternative UPI payment option.</p>
             </div>
-            <label className="flex items-center gap-2 self-end rounded-lg border border-border p-3">
-              <Switch checked={settings.codEnabled} onCheckedChange={(v) => update("codEnabled", v)} />
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
-                <p className="text-xs font-semibold">Cash on Delivery</p>
-                <p className="text-[10px] text-muted-foreground">Allow customers to pay on delivery</p>
+                <p className="text-xs font-semibold">Cash on Delivery (COD)</p>
+                <p className="text-[10px] text-muted-foreground">Allow customers to pay cash upon arrival</p>
               </div>
-            </label>
+              <Switch checked={settings.codEnabled} onCheckedChange={(v) => update("codEnabled", v)} />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -1398,14 +2042,11 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
             <Button onClick={testRazorpay} disabled={testingRazorpay} size="sm" className="gap-1.5">
               {testingRazorpay ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Test Connection
             </Button>
-            <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline">
-              Get Razorpay Keys <ExternalLink size={11} />
-            </a>
           </div>
         </CardContent>
       </Card>
 
-      {/* ============ EMAIL (Gmail SMTP) ============ */}
+      {/* GMAIL SMTP */}
       <Card className={cn("overflow-hidden", emailConfigured ? "border-emerald-200" : "border-amber-200")}>
         <CardHeader className="border-b border-border bg-muted/30 pb-3">
           <div className="flex items-center justify-between gap-3">
@@ -1415,31 +2056,21 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
               </div>
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  Email Service
+                  Email Service (Gmail SMTP)
                   <Badge variant={emailConfigured ? "default" : "secondary"} className="text-[10px]">
                     {emailConfigured ? "● Active" : "● Inactive"}
                   </Badge>
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Gmail SMTP — order confirmations & admin notifications</p>
+                <p className="text-xs text-muted-foreground">Order confirmations & admin notifications</p>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-xs font-medium">
+            <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
               <Switch checked={settings.emailEnabled} onCheckedChange={(v) => update("emailEnabled", v)} />
               {settings.emailEnabled ? "Enabled" : "Disabled"}
             </label>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          {!emailConfigured && (
-            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              <Info size={14} className="mt-0.5 shrink-0" />
-              <div>
-                <p className="font-semibold">Email is not configured yet.</p>
-                <p>Without email, order confirmations won't be sent to customers and you won't receive order notifications. Set up Gmail below (requires a 16-character App Password).</p>
-              </div>
-            </div>
-          )}
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label className="flex items-center gap-1.5 text-xs"><Mail size={12} /> Gmail Address <span className="text-destructive">*</span></Label>
@@ -1450,10 +2081,9 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
                 placeholder="yourstore@gmail.com"
                 className="mt-1 text-xs"
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">Emails will be sent FROM this address.</p>
             </div>
             <div>
-              <Label className="flex items-center gap-1.5 text-xs"><Lock size={12} /> App Password <span className="text-destructive">*</span></Label>
+              <Label className="flex items-center gap-1.5 text-xs"><Lock size={12} /> App Password (16-char) <span className="text-destructive">*</span></Label>
               <div className="relative mt-1">
                 <Input
                   type={showEmailPass ? "text" : "password"}
@@ -1467,17 +2097,15 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
                   type="button"
                   onClick={() => setShowEmailPass((s) => !s)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label="Toggle visibility"
                 >
                   {showEmailPass ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Not your regular password. Generate at myaccount.google.com/apppasswords.</p>
             </div>
           </div>
 
           <div>
-            <Label className="text-xs">Store Notification Email (where order alerts go)</Label>
+            <Label className="text-xs">Store Notification Email (where new order alerts go)</Label>
             <Input
               type="email"
               value={settings.storeNotifyEmail}
@@ -1485,18 +2113,6 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
               placeholder="orders@yourstore.com"
               className="mt-1 text-xs"
             />
-            <p className="mt-1 text-[10px] text-muted-foreground">New order notifications will be sent here. Defaults to your Gmail address if empty.</p>
-          </div>
-
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <ShieldCheck size={13} /> What gets sent:
-            </p>
-            <ul className="mt-1.5 space-y-1 text-[11px] text-foreground/80">
-              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>Order confirmation</strong> → to customer's email (instantly after order)</li>
-              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>New order alert</strong> → to your notification email (with full order details)</li>
-              <li className="flex items-center gap-1.5"><Check size={11} className="text-emerald-600" /> <strong>Contact form messages</strong> → to your notification email</li>
-            </ul>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -1506,40 +2122,108 @@ function IntegrationsView({ initialSettings }: { initialSettings: Settings }) {
             <Button onClick={testEmail} disabled={testingEmail} size="sm" className="gap-1.5">
               {testingEmail ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send Test Email
             </Button>
-            <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline">
-              Generate App Password <ExternalLink size={11} />
-            </a>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
 
-      {/* ============ Setup Help ============ */}
-      <Card className="bg-muted/30">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Info size={16} className="text-primary" /> Quick Setup Guide</CardTitle></CardHeader>
-        <CardContent className="space-y-3 text-xs text-muted-foreground">
+function SettingsView({ initialSettings }: { initialSettings: Settings }) {
+  const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.settings) setSettings(d.settings);
+      })
+      .catch(() => {});
+  }, []);
+
+  const update = <K extends keyof Settings>(k: K, v: Settings[K]) => {
+    setSettings((s) => ({ ...s, [k]: v }));
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (res.ok) {
+        toast.success("Settings saved!");
+      }
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div>
+        <h1 className="font-playfair text-2xl font-bold">Store Settings</h1>
+        <p className="text-sm text-muted-foreground">Manage your brand info & shipping rules</p>
+      </div>
+
+      <Card>
+        <CardContent className="space-y-4 pt-4 text-xs">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Brand Name</Label>
+              <Input value={settings.brandName} onChange={(e) => update("brandName", e.target.value)} />
+            </div>
+            <div>
+              <Label>Tagline</Label>
+              <Input value={settings.tagline} onChange={(e) => update("tagline", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={settings.email} onChange={(e) => update("email", e.target.value)} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} />
+            </div>
+          </div>
           <div>
-            <p className="font-semibold text-foreground">💳 Razorpay Setup (5 min):</p>
-            <ol className="ml-4 list-decimal space-y-0.5 pt-1">
-              <li>Create an account at <a href="https://razorpay.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">razorpay.com</a> (free for testing)</li>
-              <li>Go to Dashboard → Settings → API Keys → Generate Key</li>
-              <li>Copy the <strong>Key ID</strong> and <strong>Key Secret</strong> into the fields above</li>
-              <li>Click <strong>Test Connection</strong> to verify, then <strong>Save</strong></li>
-              <li>For production, use live keys (<code>rzp_live_</code>). For testing, use test keys (<code>rzp_test_</code>).</li>
-            </ol>
+            <Label>Address</Label>
+            <Input value={settings.address} onChange={(e) => update("address", e.target.value)} />
           </div>
-          <div className="border-t border-border pt-3">
-            <p className="font-semibold text-foreground">📧 Gmail Setup (5 min):</p>
-            <ol className="ml-4 list-decimal space-y-0.5 pt-1">
-              <li>Enable <strong>2-Step Verification</strong> on your Google Account (myaccount.google.com)</li>
-              <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-primary hover:underline">App Passwords</a> and create a password for "Mail"</li>
-              <li>Copy the 16-character password (no spaces) into the <strong>App Password</strong> field above</li>
-              <li>Enter your Gmail address & notification email, then click <strong>Send Test Email</strong></li>
-              <li>Check your inbox for the test email to confirm it works!</li>
-            </ol>
+          <div>
+            <Label>Announcement Bar Text</Label>
+            <Input value={settings.announcementBar} onChange={(e) => update("announcementBar", e.target.value)} />
           </div>
-          <div className="border-t border-border pt-3 text-[11px]">
-            <p className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-primary" /> <strong>Security:</strong> All credentials are stored in your database and never exposed to the browser. Secret fields are masked (••••) when returned to this page. You can still use <code>.env</code> as a fallback if preferred.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Free Shipping Threshold (₹)</Label>
+              <Input type="number" value={settings.freeShippingThreshold} onChange={(e) => update("freeShippingThreshold", Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>Standard Shipping Fee (₹)</Label>
+              <Input type="number" value={settings.shippingFee} onChange={(e) => update("shippingFee", Number(e.target.value))} />
+            </div>
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Instagram URL</Label>
+              <Input value={settings.instagram || ""} onChange={(e) => update("instagram", e.target.value)} placeholder="https://instagram.com/..." />
+            </div>
+            <div>
+              <Label>Facebook URL</Label>
+              <Input value={settings.facebook || ""} onChange={(e) => update("facebook", e.target.value)} placeholder="https://facebook.com/..." />
+            </div>
+          </div>
+          <Button onClick={save} disabled={saving} className="gap-2">
+            {saving ? <Loader2 size={15} className="animate-spin" /> : null} Save Settings
+          </Button>
         </CardContent>
       </Card>
     </div>

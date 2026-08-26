@@ -5,15 +5,15 @@ import { saveSettings } from "../src/lib/settings";
 import { DEFAULT_SETTINGS } from "../src/lib/types";
 
 const IMG = {
-  chanaPlain: "/products/roasted-chana-plain.png",
-  chanaHusk: "/products/roasted-chana-plain.png",
-  peanutsHusk: "/products/roasted-peanuts-husk.png",
-  peanutsSalted: "/products/roasted-peanuts-salted.png",
-  peanutsDark: "/products/roasted-peanuts-dark.png",
-  flavoredChana: "/products/flavored-chana.png",
-  flavoredPeanuts: "/products/flavored-peanuts.png",
-  chikki: "/products/chikki.png",
-  combo: "/products/combo-pack.png",
+  chanaPlain: "/products/roasted-chana-plain.jpg",
+  chanaHusk: "/products/roasted-chana-plain.jpg",
+  peanutsHusk: "/products/roasted-peanuts-husk.jpg",
+  peanutsSalted: "/products/roasted-peanuts-salted.jpg",
+  peanutsDark: "/products/roasted-peanuts-salted.jpg",
+  flavoredChana: "/products/spicy-pepper-chana.jpg",
+  flavoredPeanuts: "/products/roasted-peanuts-salted.jpg",
+  chikki: "/products/chikki.jpg",
+  combo: "/products/combo-pack.jpg",
 };
 
 interface SeedProduct {

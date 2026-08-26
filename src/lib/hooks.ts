@@ -72,6 +72,7 @@ export function useAdminStats() {
     pendingOrders: number;
     deliveredOrders: number;
     lowStockProducts: number;
+    totalCustomers: number;
     totalReviews: number;
     totalRevenue: number;
     recentOrders: Array<Record<string, unknown>>;
