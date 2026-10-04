@@ -32,7 +32,13 @@ export function AboutPage() {
       {/* Story */}
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <div className="relative h-64 overflow-hidden rounded-2xl md:h-full">
-          <Image src="/brand/about-banner.png" alt="Farm to table" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+          <div className="absolute inset-0 grid grid-cols-3 items-center gap-2 bg-[#efe4d0] p-4">
+            {["khari-sing", "khara-chana", "mori-sing", "mora-chana", "masala-sing", "masala-chana-10"].map((n) => (
+              <div key={n} className="relative aspect-square [filter:drop-shadow(0_8px_10px_rgba(0,0,0,0.2))]">
+                <Image src={`/products/satnam/${n}.webp`} alt="Satnam pack" fill className="object-contain" sizes="20vw" />
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col justify-center gap-3">
           <h2 className="font-playfair text-2xl font-bold">From Humble Beginnings</h2>
@@ -43,7 +49,7 @@ export function AboutPage() {
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">
             We source the finest desi chickpeas and premium peanuts directly from farmers, roast
-            them in small batches using time-honored techniques, and vacuum-pack them to preserve
+            them in small batches using time-honored techniques, and pack them fresh to preserve
             that signature crunch and flavor.
           </p>
           <Button onClick={() => navigate("/products")} className="w-fit gap-2">
@@ -220,12 +226,12 @@ export function ContactPage({ settings }: { settings: Settings }) {
 export function RecipesPage() {
   const { navigate } = useRouter();
   const recipes = [
-    { title: "Spicy Chana Chaat", desc: "A tangy, spicy chaat made with roasted chana, onions, tomatoes and chutneys.", time: "10 min", difficulty: "Easy", image: "/products/flavored-chana.png" },
-    { title: "Peanut Butter Smoothie", desc: "Creamy protein-packed smoothie with peanut butter, banana and milk.", time: "5 min", difficulty: "Easy", image: "/products/roasted-peanuts-salted.png" },
-    { title: "Sattu Drink", desc: "Refreshing summer drink with roasted chana flour, water and spices.", time: "5 min", difficulty: "Easy", image: "/products/roasted-chana-plain.png" },
-    { title: "Chana Namkeen Mix", desc: "Festive snack mix with roasted chana, peanuts, sev and spices.", time: "15 min", difficulty: "Medium", image: "/products/combo-pack.png" },
-    { title: "Peanut Chikki Crush", desc: "Crushed peanut chikki over ice cream for a crunchy dessert.", time: "5 min", difficulty: "Easy", image: "/products/chikki.png" },
-    { title: "Hing Jeera Chana Soup", desc: "Comforting soup with hing-jeera chana, tomatoes and herbs.", time: "20 min", difficulty: "Medium", image: "/products/flavored-chana.png" },
+    { title: "Spicy Chana Chaat", desc: "A tangy, spicy chaat made with roasted chana, onions, tomatoes and chutneys.", time: "10 min", difficulty: "Easy", image: "/products/satnam/masala-chana-10.webp" },
+    { title: "Peanut Butter Smoothie", desc: "Creamy protein-packed smoothie with peanut butter, banana and milk.", time: "5 min", difficulty: "Easy", image: "/products/satnam/mori-sing.webp" },
+    { title: "Sattu Drink", desc: "Refreshing summer drink with roasted chana flour, water and spices.", time: "5 min", difficulty: "Easy", image: "/products/satnam/khara-chana.webp" },
+    { title: "Chana Namkeen Mix", desc: "Festive snack mix with roasted chana, peanuts, sev and spices.", time: "15 min", difficulty: "Medium", image: "/products/satnam/masala-sing.webp" },
+    { title: "Peanut Chikki Crush", desc: "Crushed peanut chikki over ice cream for a crunchy dessert.", time: "5 min", difficulty: "Easy", image: "/products/satnam/khari-sing.webp" },
+    { title: "Hing Jeera Chana Soup", desc: "Comforting soup with hing-jeera chana, tomatoes and herbs.", time: "20 min", difficulty: "Medium", image: "/products/satnam/mora-chana.webp" },
   ];
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -239,8 +245,8 @@ export function RecipesPage() {
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {recipes.map((r) => (
           <div key={r.title} className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-            <div className="relative aspect-video overflow-hidden">
-              <Image src={r.image} alt={r.title} fill className="object-cover transition-transform group-hover:scale-110" sizes="(max-width: 640px) 100vw, 33vw" />
+            <div className="relative aspect-video overflow-hidden bg-[#f3ead9]">
+              <Image src={r.image} alt={r.title} fill className="object-contain p-3 transition-transform group-hover:scale-105" sizes="(max-width: 640px) 100vw, 33vw" />
               <div className="absolute left-2 top-2 flex gap-1.5">
                 <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-foreground">{r.time}</span>
                 <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">{r.difficulty}</span>

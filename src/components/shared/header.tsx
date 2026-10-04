@@ -233,7 +233,7 @@ export function Header({ categories, settings, homeConfig }: HeaderProps) {
                     >
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted/40">
                         <Image
-                          src={item.images[0] || "/products/roasted-chana-plain.png"}
+                          src={item.images[0] || "/products/satnam/khari-sing.webp"}
                           alt={item.name}
                           fill
                           className="object-contain p-0.5"

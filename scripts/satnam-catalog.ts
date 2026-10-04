@@ -1,7 +1,7 @@
 /**
  * Satnam Sing Chana — real product catalog.
  *
- * Replaces the old demo products with the real Satnam products and sets up the categories.
+ * Keeps ONLY the Satnam products listed below (all other products & categories are deleted).
  * Prices (per kg): Khari Sing 200, Mori Sing 200, Khara Chana 160, Mora Chana 160, Masala Sing 250, Masala Chana 200.
  * Safe to run more than once (it upserts by slug).
  *
@@ -21,7 +21,7 @@ const CATEGORIES = [
     description: "Traditionally roasted peanuts — Khari Sing and Mori Sing, by weight.",
     color: "#e9d7c1",
     icon: "🥜",
-    image: `${IMG}/khari-sing-loose.webp`,
+    image: `${IMG}/khari-sing.webp`,
     order: 1,
   },
   {
@@ -39,7 +39,7 @@ const CATEGORIES = [
     description: "Chatpata Masala Sing & Masala Chana — bold spices, no added colour.",
     color: "#f3c2a6",
     icon: "🌶️",
-    image: `${IMG}/masala-sing-loose.webp`,
+    image: `${IMG}/masala-sing.webp`,
     order: 3,
   },
   {
@@ -86,7 +86,7 @@ const PRODUCTS: {
     shortDescription: "Gujarat's classic salted roasted peanuts in shell — high protein, extra crunchy. ₹200/kg.",
     description:
       "Satnam Roasted Khari Sing is the classic Gujarati salted peanut, roasted in its shell the traditional way so every peanut stays crisp and evenly salted. A high-protein snack for tea time, travel or anytime munching. Quality is our recipe — since 1992.",
-    images: [`${IMG}/khari-sing-loose.webp`],
+    images: [`${IMG}/khari-sing.webp`],
     price: 50,
     variants: byWeight(200, [250, 500]),
     tags: ["khari sing", "peanuts", "salted", "in shell", "high protein"],
@@ -148,7 +148,7 @@ const PRODUCTS: {
     shortDescription: "Roasted peanuts tossed in chatpata red chilli masala. ₹250/kg.",
     description:
       "Satnam Masala Sing is crunchy roasted peanuts coated in a spicy, tangy masala of red chilli and Indian spices. Traditionally roasted with no added colour or preservatives — the perfect chatpata snack.",
-    images: [`${IMG}/masala-sing-loose.webp`],
+    images: [`${IMG}/masala-sing.webp`],
     price: 50,
     variants: byWeight(250, [200]),
     tags: ["masala sing", "masala peanuts", "spicy", "chatpata"],
@@ -218,20 +218,6 @@ const PRODUCTS: {
   },
 ];
 
-// Demo products from the original template seed — removed so only real products show.
-const DEMO_SLUGS = [
-  "black-pepper-roasted-chana", "black-pepper-roasted-peanuts", "chatpata-masala-roasted-chana",
-  "chili-garlic-roasted-chana", "chilli-garlic-roasted-peanuts", "classic-salted-roasted-peanuts",
-  "dark-roasted-whole-peanut-unsalted", "flavour-roasted-chana-variety-combo-pack-of-5",
-  "flavour-roasted-peanut-variety-combo", "flavour-roasted-peanut-variety-combo-pack",
-  "haldi-roasted-chana-with-skin", "haldi-roasted-whole-chana-without-husk", "hing-jeera-roasted-chana",
-  "hing-jeera-roasted-peanuts", "khari-sing-premium-roasted-salted-peanuts", "mexican-chipotle-roasted-chana",
-  "mirch-masala-roasted-chana", "mirch-masala-roasted-peanuts", "nimbu-mirchi-pudina-roasted-chana",
-  "nimbu-mirchi-pudina-roasted-peanuts", "peanut-plus-khari-sing-traditionally-roasted",
-  "peanut-plus-light-roasted-whole-peanut-unsalted", "peanut-plus-salted-roasted-peanuts", "plain-roasted-whole-chana",
-];
-const DEMO_CATEGORY_SLUGS = ["flavored-peanuts", "flavored-chana", "kitchen-essentials"];
-
 async function main() {
   console.log("🥜 Setting up Satnam catalog…");
 
@@ -276,20 +262,15 @@ async function main() {
     console.log(`  ✓ product ${p.name}`);
   }
 
-  const removed = await db.product.deleteMany({ where: { slug: { in: DEMO_SLUGS } } });
-  console.log(`  ✓ removed ${removed.count} demo products`);
+  // Keep ONLY the products listed above — everything else is removed.
+  // (Past orders keep their item name/price; only the product link is cleared.)
+  const keepSlugs = PRODUCTS.map((p) => p.slug);
+  const removed = await db.product.deleteMany({ where: { slug: { notIn: keepSlugs } } });
+  console.log(`  ✓ removed ${removed.count} other products`);
 
-  for (const slug of DEMO_CATEGORY_SLUGS) {
-    const cat = await db.category.findUnique({ where: { slug } });
-    if (!cat) continue;
-    const left = await db.product.count({ where: { categoryId: cat.id } });
-    if (left === 0) {
-      await db.category.delete({ where: { id: cat.id } });
-      console.log(`  ✓ removed empty demo category ${cat.name}`);
-    } else {
-      console.log(`  • kept category ${cat.name} (${left} products still in it)`);
-    }
-  }
+  const keepCats = CATEGORIES.map((c) => c.slug);
+  const removedCats = await db.category.deleteMany({ where: { slug: { notIn: keepCats } } });
+  console.log(`  ✓ removed ${removedCats.count} other categories`);
 
   if (process.argv.includes("--reset-banners")) {
     await db.setting.deleteMany({ where: { key: "storefront_banners" } });

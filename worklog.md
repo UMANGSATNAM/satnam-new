@@ -223,3 +223,12 @@ Date: 2026-10-04
 - Product cards show available weights (250 g · 500 g)
 - SECURITY FIX: POST /api/orders (COD) trusted client prices/totals/paymentStatus. It now recalculates items, coupon, shipping and total
   server-side (calculateVerifiedOrderTotals), forces COD/PENDING, respects codEnabled, rate-limited, sanitizes input.
+
+---
+Task ID: SATNAM-ONLY-REAL
+Date: 2026-10-04
+- Catalog script now keeps ONLY the 9 Satnam products / 4 categories and deletes every other product & category
+- Only the pack images supplied by the client are used (edited "loose" images removed; weighted Khari Sing & Masala Sing use the original packs)
+- All old demo/AI images replaced in code (fallbacks, admin preset images, About page, Recipes) and moved out of /public to _claude_tmp/old-images
+- seed.ts no longer seeds demo products/reviews unless SEED_DEMO=1
+- TODO (client to review): template copy in FAQ/policy/track-order pages still mentions vacuum packing & 6–9 month shelf life

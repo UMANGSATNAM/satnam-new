@@ -26,7 +26,7 @@ export function WishlistPage({ products }: WishlistProps) {
       productId: product.id,
       slug: product.slug,
       name: product.name,
-      image: product.images[0] || "/products/roasted-chana-plain.png",
+      image: product.images[0] || "/products/satnam/khari-sing.webp",
       price: product.price,
       salePrice: product.salePrice,
       quantity: 1,
@@ -43,7 +43,7 @@ export function WishlistPage({ products }: WishlistProps) {
           productId: p.id,
           slug: p.slug,
           name: p.name,
-          image: p.images[0] || "/products/roasted-chana-plain.png",
+          image: p.images[0] || "/products/satnam/khari-sing.webp",
           price: p.price,
           salePrice: p.salePrice,
           quantity: 1,
@@ -144,7 +144,7 @@ export function WishlistPage({ products }: WishlistProps) {
                   className="relative aspect-square w-full cursor-pointer overflow-hidden bg-muted/20"
                 >
                   <Image
-                    src={p.images[0] || "/products/roasted-chana-plain.png"}
+                    src={p.images[0] || "/products/satnam/khari-sing.webp"}
                     alt={p.name}
                     fill
                     className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"

@@ -75,7 +75,7 @@ export function CustomerAccountPage({ products, settings }: CustomerAccountProps
         productId: item.productId || matchedProduct?.id || `reorder-${item.name}`,
         slug: matchedProduct?.slug || "products",
         name: item.name,
-        image: item.image || "/products/roasted-chana-plain.png",
+        image: item.image || "/products/satnam/khari-sing.webp",
         price: item.price,
         quantity: item.quantity,
         weight: item.weight || undefined,
@@ -214,7 +214,7 @@ export function CustomerAccountPage({ products, settings }: CustomerAccountProps
                       <div key={item.id} className="flex items-center gap-3 rounded-lg border border-border/60 p-2.5">
                         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded bg-muted/30">
                           <Image
-                            src={item.image || "/products/roasted-chana-plain.png"}
+                            src={item.image || "/products/satnam/khari-sing.webp"}
                             alt={item.name}
                             fill
                             className="object-contain p-1"

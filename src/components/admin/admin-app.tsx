@@ -547,7 +547,7 @@ function ProductsView() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
-                        <Image src={p.images[0] || "/products/roasted-chana-plain.png"} alt={p.name} fill className="object-contain p-1" />
+                        <Image src={p.images[0] || "/products/satnam/khari-sing.webp"} alt={p.name} fill className="object-contain p-1" />
                       </div>
                       <div>
                         <p className="font-semibold text-sm line-clamp-1">{p.name}</p>
@@ -665,12 +665,13 @@ function ProductFormDialog({
   const imageList = form.images.trim().split("\n").filter(Boolean);
 
   const presetImages = [
-    "/products/roasted-chana-plain.png",
-    "/products/roasted-peanuts-salted.png",
-    "/products/flavored-chana.png",
-    "/products/flavored-peanuts.png",
-    "/products/combo-pack.png",
-    "/products/chikki.png",
+    "/products/satnam/khari-sing.webp",
+    "/products/satnam/mori-sing.webp",
+    "/products/satnam/khara-chana.webp",
+    "/products/satnam/mora-chana.webp",
+    "/products/satnam/masala-sing.webp",
+    "/products/satnam/masala-chana-10.webp",
+    "/products/satnam/masala-chana-family.webp",
   ];
 
   const save = async () => {
@@ -830,7 +831,7 @@ function ProductFormDialog({
                 value={form.images}
                 onChange={(e) => setForm({ ...form, images: e.target.value })}
                 rows={2}
-                placeholder="/products/roasted-chana-plain.png"
+                placeholder="/products/satnam/khari-sing.webp"
                 className="text-xs font-mono"
               />
             </div>

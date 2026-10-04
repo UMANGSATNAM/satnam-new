@@ -655,6 +655,9 @@ async function seed() {
   console.log("  → Creating admin user...");
   await ensureAdminUser();
 
+  // Demo catalog (template products + sample reviews) is OFF by default.
+  // Real Satnam products come from: npx tsx scripts/satnam-catalog.ts
+  if (process.env.SEED_DEMO === "1") {
   console.log("  → Seeding categories...");
   for (const cat of CATEGORIES) {
     await db.category.upsert({
@@ -758,6 +761,10 @@ async function seed() {
     }
   }
 
+  } else {
+    console.log("  → Skipping demo products (run scripts/satnam-catalog.ts for the real catalog)");
+  }
+
   const existingCoupons = await db.coupon.count();
   if (existingCoupons === 0) {
     console.log("  → Seeding coupons...");
@@ -772,8 +779,6 @@ async function seed() {
   }
 
   console.log("✅ Seed complete!");
-  console.log(`   - ${CATEGORIES.length} categories`);
-  console.log(`   - ${PRODUCTS.length} products`);
   console.log(`   - Admin: ${process.env.ADMIN_EMAIL || "admin@satnamsinghchana.com"}`);
   console.log(`   - Coupons: WELCOME10, FLAT50, SAVE15, FREESHIP`);
 }

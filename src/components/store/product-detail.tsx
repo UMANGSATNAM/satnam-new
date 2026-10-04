@@ -107,7 +107,7 @@ export function ProductDetail({ slug, freeShippingThreshold }: ProductDetailProp
   const variant = product.variants?.[selectedVariant] || product.variants?.[0];
   const variantPrice = variant?.price != null ? variant.price : effectivePrice(product.price, product.salePrice);
   const basePrice = variant?.price != null ? variant.price : product.price;
-  const images = product.images?.length ? product.images : ["/products/roasted-chana-plain.png"];
+  const images = product.images?.length ? product.images : ["/products/satnam/khari-sing.webp"];
   const isWished = wishlist.has(product.id);
 
   // urgency

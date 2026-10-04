@@ -183,12 +183,16 @@ export function ProductCard({ product, className, compact = false }: ProductCard
         {/* Rating */}
         {(product.reviewCount > 0 || product.soldCount > 0) && (
         <div className="flex items-center justify-between">
-          <StarRating
-            rating={product.rating}
-            reviewCount={product.reviewCount}
-            size={12}
-            showValue
-          />
+          {product.reviewCount > 0 ? (
+            <StarRating
+              rating={product.rating}
+              reviewCount={product.reviewCount}
+              size={12}
+              showValue
+            />
+          ) : (
+            <span />
+          )}
           <span className="hidden items-center gap-0.5 text-[10px] font-medium text-emerald-600 sm:flex">
             <PackageCheck size={11} />
             {product.soldCount > 1000
