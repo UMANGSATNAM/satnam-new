@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Quote,
-  PackageCheck,
   BadgeIndianRupee,
   Flame,
   Mail,
@@ -45,6 +44,7 @@ export function Home({ products, categories, storefront, settings }: HomeProps) 
     hero: <HeroSlider banners={byPlacement("hero")} autoplay={config.heroAutoplaySeconds} />,
     trustStrip: <TrustStrip freeShip={settings.freeShippingThreshold} />,
     categories: <CategoryTiles categories={categories} products={products} title={config.categoriesTitle} />,
+    tenPacks: <TenRupeePacks products={products} categories={categories} config={config} />,
     promo: <PromoBanners banners={byPlacement("promo")} />,
     deals: <DealsOfDay products={products} config={config} />,
     popular: <PopularProducts products={products} categories={categories} config={config} />,
@@ -149,9 +149,9 @@ function HeroSlider({ banners, autoplay }: { banners: Banner[]; autoplay: number
 
 function TrustStrip({ freeShip }: { freeShip: number }) {
   const items = [
-    { icon: Leaf, title: "100% Natural", sub: "No preservatives" },
-    { icon: PackageCheck, title: "Vacuum Packed", sub: "Stays crunchy for months" },
-    { icon: ShieldCheck, title: "FSSAI Certified", sub: "Hygienic processing" },
+    { icon: Leaf, title: "No Added Colour", sub: "No preservatives" },
+    { icon: Flame, title: "Traditionally Roasted", sub: "The way we have since 1992" },
+    { icon: ShieldCheck, title: "Export Quality", sub: "High-protein sing & chana" },
     { icon: Truck, title: `Free Shipping ₹${freeShip}+`, sub: "Pan-India delivery" },
     { icon: BadgeIndianRupee, title: "Cash on Delivery", sub: "Pay when it arrives" },
   ];
@@ -190,12 +190,17 @@ function CategoryTiles({
   const { navigate } = useRouter();
   if (!categories.length) return null;
   const imageFor = (c: Category) =>
-    c.image || products.find((p) => p.categoryId === c.id)?.images?.[0] || "/products/roasted-chana-plain.png";
+    c.image || products.find((p) => p.categoryId === c.id)?.images?.[0] || "/products/satnam/khari-sing.webp";
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
       <SectionTitle title={title} />
-      <div className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5">
+      <div
+        className={cn(
+          "no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-auto sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0",
+          categories.length >= 5 ? "lg:grid-cols-5" : categories.length === 4 ? "lg:grid-cols-4" : "lg:max-w-4xl"
+        )}
+      >
         {categories.map((c, i) => (
           <button
             key={c.id}
@@ -207,8 +212,8 @@ function CategoryTiles({
               style={{ backgroundColor: c.color && c.color !== "#fef3c7" ? c.color : TILE_COLORS[i % TILE_COLORS.length] }}
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.45),transparent_62%)]" />
-              <div className="absolute inset-[14%] overflow-hidden rounded-xl shadow-xl ring-4 ring-white/80 transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-105">
-                <SmartImg src={imageFor(c)} alt={c.name} sizes="(max-width:640px) 45vw, 20vw" className="object-cover" />
+              <div className="absolute inset-[8%] transition-transform duration-500 [filter:drop-shadow(0_12px_14px_rgba(0,0,0,0.25))] group-hover:-translate-y-1 group-hover:scale-105">
+                <SmartImg src={imageFor(c)} alt={c.name} sizes="(max-width:640px) 45vw, 20vw" className="object-contain" />
               </div>
               {c.icon && (
                 <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-base shadow">
@@ -224,6 +229,51 @@ function CategoryTiles({
             </div>
           </button>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function TenRupeePacks({
+  products,
+  categories,
+  config,
+}: {
+  products: Product[];
+  categories: Category[];
+  config: HomeConfig;
+}) {
+  const { navigate } = useRouter();
+  const cat = categories.find((c) => c.slug === config.tenPacksCategory);
+  const list = cat ? products.filter((p) => p.categoryId === cat.id) : [];
+  if (!list.length) return null;
+  return (
+    <section className="relative overflow-hidden bg-[#ffe27a] py-10 md:py-14">
+      <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-white/30" />
+      <div className="pointer-events-none absolute -bottom-20 right-10 h-64 w-64 rounded-full bg-white/25" />
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-[280px_1fr]">
+        <div className="flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
+          <span className="flex h-24 w-24 rotate-[-8deg] items-center justify-center rounded-full bg-[#1f3554] font-display text-4xl font-extrabold text-[#ffe27a] shadow-xl ring-4 ring-white">
+            ₹10
+          </span>
+          <h2 className="font-display text-3xl font-extrabold text-[#1f2a24] sm:text-4xl">{config.tenPacksTitle}</h2>
+          <p className="max-w-xs text-sm text-[#1f2a24]/75">
+            Handy ₹10 packs of your favourite Satnam snacks — for the bag, the office drawer or the tiffin.
+          </p>
+          <Button
+            className="gap-2 rounded-full bg-[#1f3554] px-6 hover:bg-[#162741]"
+            onClick={() => navigate(`/category/${cat!.slug}`)}
+          >
+            Shop all ₹10 packs <ArrowRight size={16} />
+          </Button>
+        </div>
+        <Rail arrows={list.length > 3}>
+          {list.map((p) => (
+            <div key={p.id} className="w-[48%] shrink-0 snap-start sm:w-[32%] lg:w-[calc(33.33%-11px)]">
+              <ProductCard product={p} />
+            </div>
+          ))}
+        </Rail>
       </div>
     </section>
   );
@@ -319,7 +369,7 @@ function DealsOfDay({ products, config }: { products: Product[]; config: HomeCon
   );
 }
 
-function Rail({ children }: { children: React.ReactNode }) {
+function Rail({ children, arrows = true }: { children: React.ReactNode; arrows?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: "smooth" });
   return (
@@ -327,6 +377,8 @@ function Rail({ children }: { children: React.ReactNode }) {
       <div ref={ref} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:gap-4">
         {children}
       </div>
+      {arrows && (
+      <>
       <button
         onClick={() => scroll(-1)}
         className="absolute -left-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full border border-border bg-card shadow-md hover:bg-muted md:flex"
@@ -341,6 +393,8 @@ function Rail({ children }: { children: React.ReactNode }) {
       >
         <ChevronRight size={18} />
       </button>
+      </>
+      )}
     </div>
   );
 }
@@ -413,7 +467,8 @@ function PopularProducts({
 
 function Bestsellers({ products, title }: { products: Product[]; title: string }) {
   const list = products.filter((p) => p.isBestseller).slice(0, 8);
-  if (!list.length) return null;
+  // With a small catalog this would just repeat Popular Products
+  if (list.length < 3) return null;
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
       <SectionTitle title={title} />
@@ -441,19 +496,19 @@ function WhyUs() {
     {
       icon: Leaf,
       title: "Freshness",
-      desc: "Roasted in small batches and vacuum packed the same day, so every pack opens crunchy.",
+      desc: "Roasted the traditional way and packed fresh, so every pack opens crisp and crunchy.",
       color: "text-emerald-700 bg-emerald-100",
     },
     {
       icon: Smile,
       title: "Taste",
-      desc: "Traditional bhatti roasting and masalas ground in-house — the taste Gujarat grew up with.",
+      desc: "From classic Khari Sing to chatpata Masala Chana — the taste Gujarat has trusted since 1992.",
       color: "text-amber-700 bg-amber-100",
     },
     {
       icon: Heart,
       title: "Health",
-      desc: "High protein, high fibre, no palm oil and no preservatives. Snacking you don't have to hide.",
+      desc: "High in protein with no added colour or preservatives. Snacking you don't have to hide.",
       color: "text-rose-700 bg-rose-100",
     },
   ];
@@ -461,7 +516,7 @@ function WhyUs() {
     <section className="bg-[#0f5132] py-12 text-white md:py-16">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
         <div className="mb-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#f5c542]">Why choose us</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#f5c542]">Since 1992 · Quality is our recipe!</p>
           <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">From Farm to Table — The Finest Quality</h2>
         </div>
         <div className="grid gap-5 md:grid-cols-3">

@@ -168,7 +168,7 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
         <div className="flex items-center gap-2 border-b border-border p-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base text-white">🫘</div>
+          <img src="/brand/satnam-logo.png" alt="" className="h-10 w-auto" />
           <div>
             <p className="text-sm font-bold leading-none">Admin Panel</p>
             <p className="text-[10px] text-muted-foreground">{initialSettings.brandName}</p>
@@ -214,7 +214,7 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex items-center gap-2 border-b border-border p-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-base text-white">🫘</div>
+            <img src="/brand/satnam-logo.png" alt="" className="h-10 w-auto" />
             <p className="text-sm font-bold">Admin Panel</p>
           </div>
           <nav className="space-y-1 p-3">
@@ -295,7 +295,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-amber-50 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-3xl text-white shadow-lg">🫘</div>
+          <img src="/brand/satnam-logo.png" alt="Satnam" className="mx-auto mb-3 h-24 w-auto" />
           <h1 className="font-playfair text-2xl font-bold">Admin Panel</h1>
           <p className="text-sm text-muted-foreground">Sign in to manage Satnam Singh Chana</p>
         </div>
@@ -1188,7 +1188,7 @@ function InvoiceModal({
           <div className="flex justify-between border-b pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white font-bold">🫘</div>
+                <img src="/brand/satnam-logo.png" alt="" className="h-12 w-auto" />
                 <span className="font-playfair text-lg font-bold">{settings.brandName}</span>
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">{settings.address}</p>

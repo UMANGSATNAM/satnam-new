@@ -25,10 +25,15 @@ function mergeConfig(saved: Partial<HomeConfig>): HomeConfig {
   // Keep section list complete even if new sections were added after the admin saved
   const savedSections = Array.isArray(saved.sections) ? saved.sections : [];
   const known = new Set(savedSections.map((s) => s.id));
-  cfg.sections = [
-    ...savedSections.filter((s) => DEFAULT_HOME_CONFIG.sections.some((d) => d.id === s.id)),
-    ...DEFAULT_HOME_CONFIG.sections.filter((d) => !known.has(d.id)),
-  ];
+  // Keep the admin's order; slot any newly added section in after the one it follows by default
+  const sections = savedSections.filter((s) => DEFAULT_HOME_CONFIG.sections.some((d) => d.id === s.id));
+  DEFAULT_HOME_CONFIG.sections.forEach((d, i) => {
+    if (known.has(d.id)) return;
+    const prev = DEFAULT_HOME_CONFIG.sections[i - 1];
+    const at = prev ? sections.findIndex((s) => s.id === prev.id) : -1;
+    sections.splice(at + 1, 0, d);
+  });
+  cfg.sections = sections;
   if (!Array.isArray(cfg.announcements)) cfg.announcements = DEFAULT_HOME_CONFIG.announcements;
   if (!Array.isArray(cfg.popularTabs)) cfg.popularTabs = [];
   return cfg;
@@ -79,6 +84,7 @@ export function sanitizeBanner(input: Partial<Banner>, index: number): Banner {
     ctaLink: str(input.ctaLink, 300),
     couponCode: str(input.couponCode, 40)?.toUpperCase(),
     image: str(input.image),
+    imageStyle: input.imageStyle === "cutout" ? "cutout" : "frame",
     desktopImage: str(input.desktopImage),
     mobileImage: str(input.mobileImage),
     bgColor: str(input.bgColor, 20),

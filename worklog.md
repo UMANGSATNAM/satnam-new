@@ -197,3 +197,29 @@ Work Log:
 - Removed the public "Admin Panel" button from the storefront header (admin still at /#/admin)
 - New display font Baloo 2 (next/font/google) for banners & headings
 - Verified: production build OK, banner save → store sync, uploads served after build, auth on all admin APIs
+
+---
+Task ID: SATNAM-REAL-CATALOG
+Date: 2026-10-04
+- Real pack images (cut out to transparent WebP) in public/products/satnam/: khari-sing, khara-chana, masala-sing, masala-chana-10, masala-chana-family
+- scripts/satnam-catalog.ts: creates categories Roasted Sing / Roasted Chana / Masala Range and 4 products
+  (Roasted Khari Sing, Khara Chana, Masala Sing, Chatpata Masala Chana), removes the 24 template demo products + empty demo categories.
+  `--reset-banners` resets homepage banners to the new Satnam defaults. Run: npx tsx scripts/satnam-catalog.ts --reset-banners
+- Prices are placeholders: ₹10 pack × 10 = ₹100, × 20 = ₹200 (edit in Admin → Products)
+- New products start with 0 rating / 0 reviews / 0 sold — rating & sold rows are hidden until real data exists
+- Banner "Photo style" option: floating pack shot (cutout) or framed photo
+- Trust strip / Why-us copy now only uses claims printed on the packs
+- TODO: Mori Sing & Mora Chana (waiting for pack images); homepage testimonials are template placeholders
+
+---
+Task ID: SATNAM-CATALOG-V2 (weights, ₹10 packs, COD security fix)
+Date: 2026-10-04
+- Added Mori Sing & Mora Chana (pack images). Made "loose" versions of Khari Sing / Masala Sing images with the ₹10 mark removed.
+- Catalog (scripts/satnam-catalog.ts) — 9 products, 4 categories:
+  - By weight: Khari Sing 250g ₹50 / 500g ₹100 (₹200/kg), Mori Sing same, Khara Chana 250g ₹40 / 500g ₹80 (₹160/kg), Mora Chana same,
+    Masala Sing 200g ₹50 (₹250/kg), Masala Chana 200g ₹40 (₹200/kg)
+  - ₹10 Packs category: Khari Sing, Masala Sing, Masala Chana — ₹10 each
+- New homepage section "₹10 Packs" (title + category configurable in Admin → Homepage); new sections are slotted into saved layouts at their default position
+- Product cards show available weights (250 g · 500 g)
+- SECURITY FIX: POST /api/orders (COD) trusted client prices/totals/paymentStatus. It now recalculates items, coupon, shipping and total
+  server-side (calculateVerifiedOrderTotals), forces COD/PENDING, respects codEnabled, rate-limited, sanitizes input.

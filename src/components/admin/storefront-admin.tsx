@@ -297,7 +297,8 @@ export function BannersView() {
     subtitle: "One line that tells customers why to click.",
     ctaLabel: "Shop Now",
     ctaLink: "/products",
-    image: "/products/roasted-peanuts-salted.png",
+    image: "/products/satnam/khari-sing.webp",
+    imageStyle: "cutout",
     bgColor: "#f3d98b",
     accentColor: "#0f6b43",
     textTheme: "dark",
@@ -504,6 +505,16 @@ function BannerEditor({
                   <Textarea rows={2} value={b.subtitle || ""} onChange={(e) => set("subtitle", e.target.value)} />
                 </div>
                 <ImageField label="Product image" value={b.image} onChange={(v) => set("image", v)} suggestions={productImages} hint="Square photo works best (1000×1000). PNG pack-shots look great." />
+                <div className="space-y-1.5">
+                  <Label>Photo style</Label>
+                  <Select value={b.imageStyle || "frame"} onValueChange={(v) => set("imageStyle", v as "frame" | "cutout")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cutout">Pack shot — floating, no frame (transparent PNG/WebP)</SelectItem>
+                      <SelectItem value="frame">Photo in white frame (normal photo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <ColorField label="Background" value={b.bgColor} onChange={(v) => set("bgColor", v)} />
                   <ColorField label="Button / accent" value={b.accentColor} onChange={(v) => set("accentColor", v)} />
@@ -722,6 +733,18 @@ export function HomepageView() {
           <CardHeader><CardTitle className="text-base">Section titles & slider</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>Categories title</Label><Input value={cfg.categoriesTitle} onChange={(e) => set("categoriesTitle", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>₹10 section title</Label><Input value={cfg.tenPacksTitle} onChange={(e) => set("tenPacksTitle", e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label>₹10 section shows category</Label>
+              <Select value={cfg.tenPacksCategory} onValueChange={(v) => set("tenPacksCategory", v)}>
+                <SelectTrigger><SelectValue placeholder="Choose category" /></SelectTrigger>
+                <SelectContent>
+                  {(categories || []).map((c) => (
+                    <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5"><Label>Deals title</Label><Input value={cfg.dealsTitle} onChange={(e) => set("dealsTitle", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Popular title</Label><Input value={cfg.popularTitle} onChange={(e) => set("popularTitle", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Bestsellers title</Label><Input value={cfg.bestsellersTitle} onChange={(e) => set("bestsellersTitle", e.target.value)} /></div>

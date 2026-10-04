@@ -37,7 +37,7 @@ export function ProductCard({ product, className, compact = false }: ProductCard
 
   const discount = discountPercent(product.price, product.salePrice);
   const price = effectivePrice(product.price, product.salePrice);
-  const images = product.images?.length ? product.images : ["/products/roasted-chana-plain.png"];
+  const images = product.images?.length ? product.images : ["/products/satnam/khari-sing.webp"];
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,13 +88,13 @@ export function ProductCard({ product, className, compact = false }: ProductCard
       )}
     >
       {/* Image area */}
-      <div className="relative aspect-square overflow-hidden bg-muted/30">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-b from-[#fbf8f1] to-[#f1eadc]">
         <Image
           src={images[imgIndex] || images[0]}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-110"
+          className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
           onMouseEnter={() => images.length > 1 && setImgIndex(1)}
           onMouseLeave={() => setImgIndex(0)}
         />
@@ -174,13 +174,14 @@ export function ProductCard({ product, className, compact = false }: ProductCard
         )}
 
         {/* Weight */}
-        {product.weight && (
+        {(product.variants?.length ? product.variants.map((v) => v.label).join(" · ") : product.weight) && (
           <span className="text-[11px] font-medium text-muted-foreground">
-            {product.weight}
+            {product.variants?.length ? product.variants.map((v) => v.label).join(" · ") : product.weight}
           </span>
         )}
 
         {/* Rating */}
+        {(product.reviewCount > 0 || product.soldCount > 0) && (
         <div className="flex items-center justify-between">
           <StarRating
             rating={product.rating}
@@ -195,6 +196,7 @@ export function ProductCard({ product, className, compact = false }: ProductCard
               : `${product.soldCount} sold`}
           </span>
         </div>
+        )}
 
         {/* Price */}
         <div className="mt-auto flex items-end justify-between gap-2 pt-1">

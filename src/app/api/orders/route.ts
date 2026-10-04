@@ -4,6 +4,7 @@ import { serializeOrder } from "@/lib/serialize";
 import { getAdminFromRequest } from "@/lib/auth";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
 import { getSettings } from "@/lib/settings";
+import { calculateVerifiedOrderTotals, checkRateLimit, sanitizeText } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -39,81 +40,53 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Public endpoint used for Cash-on-Delivery orders. Online (Razorpay) orders go through /api/checkout.
+  if (!checkRateLimit(req, 10)) {
+    return NextResponse.json({ error: "Too many requests. Please try again in a minute." }, { status: 429 });
+  }
   const body = await req.json();
+  const { customerName, email, phone, address, city, state, pincode, notes, items, couponCode } = body;
 
-  // Create order from cart (called after Razorpay verification OR for COD)
-  const {
-    customerName,
-    email,
-    phone,
-    address,
-    city,
-    state,
-    pincode,
-    notes,
-    items,
-    subtotal,
-    discount,
-    shipping,
-    total,
-    couponCode,
-    paymentMethod,
-    paymentStatus,
-    razorpayOrderId,
-    razorpayPaymentId,
-    razorpaySignature,
-    status,
-  } = body;
-
-  if (!customerName || !email || !phone || !address || !items?.length) {
+  if (!customerName || !email || !phone || !address || !Array.isArray(items) || !items.length) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+
+  const settings = await getSettings();
+  if (!settings.codEnabled) {
+    return NextResponse.json({ error: "Cash on Delivery is not available right now" }, { status: 400 });
+  }
+
+  // Never trust prices/totals/status sent by the browser — recalculate everything from the database.
+  let verified;
+  try {
+    verified = await calculateVerifiedOrderTotals(items, couponCode);
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message || "Invalid cart" }, { status: 400 });
+  }
+  const appliedCoupon = couponCode && verified.discount > 0 ? String(couponCode).toUpperCase().trim() : null;
 
   const orderNumber = `SSC${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 100)}`;
 
   const order = await db.order.create({
     data: {
       orderNumber,
-      customerName,
-      email,
-      phone,
-      address,
-      city,
-      state,
-      pincode,
-      notes: notes || null,
-      subtotal: Number(subtotal),
-      discount: Number(discount || 0),
-      shipping: Number(shipping || 0),
-      total: Number(total),
-      couponCode: couponCode || null,
-      paymentMethod: paymentMethod || "RAZORPAY",
-      paymentStatus: paymentStatus || "PENDING",
-      razorpayOrderId: razorpayOrderId || null,
-      razorpayPaymentId: razorpayPaymentId || null,
-      razorpaySignature: razorpaySignature || null,
-      status: status || "CONFIRMED",
-      items: {
-        create: items.map((item: {
-          productId?: string;
-          name: string;
-          image?: string;
-          price: number;
-          quantity: number;
-          weight?: string;
-          variant?: string;
-          total: number;
-        }) => ({
-          productId: item.productId || null,
-          name: item.name,
-          image: item.image || null,
-          price: Number(item.price),
-          quantity: Number(item.quantity),
-          weight: item.weight || null,
-          variant: item.variant || null,
-          total: Number(item.total),
-        })),
-      },
+      customerName: sanitizeText(customerName),
+      email: sanitizeText(email),
+      phone: sanitizeText(phone),
+      address: sanitizeText(address),
+      city: sanitizeText(city),
+      state: sanitizeText(state),
+      pincode: sanitizeText(pincode),
+      notes: notes ? sanitizeText(notes) : null,
+      subtotal: verified.subtotal,
+      discount: verified.discount,
+      shipping: verified.shipping,
+      total: verified.total,
+      couponCode: appliedCoupon,
+      paymentMethod: "COD",
+      paymentStatus: "PENDING",
+      status: "CONFIRMED",
+      items: { create: verified.verifiedItems },
     },
     include: { items: true },
   });
@@ -132,16 +105,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Increment coupon usage
-  if (couponCode) {
+  if (appliedCoupon) {
     await db.coupon.updateMany({
-      where: { code: couponCode },
+      where: { code: appliedCoupon },
       data: { usageCount: { increment: 1 } },
     });
   }
 
   const serialized = serializeOrder(order);
   // Send emails (non-blocking) — only if email integration is enabled in admin settings
-  const settings = await getSettings();
   if (settings.emailEnabled) {
     sendOrderConfirmationEmail(serialized).catch((e) =>
       console.error("Confirmation email failed:", e)

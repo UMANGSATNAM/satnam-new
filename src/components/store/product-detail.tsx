@@ -315,6 +315,7 @@ export function ProductDetail({ slug, freeShippingThreshold }: ProductDetailProp
             {product.name}
           </h1>
 
+          {(product.reviewCount > 0 || product.soldCount > 0) && (
           <div className="flex flex-wrap items-center gap-3">
             <StarRating rating={product.rating} size={18} showValue />
             <button
@@ -327,6 +328,7 @@ export function ProductDetail({ slug, freeShippingThreshold }: ProductDetailProp
               <PackageCheck size={14} /> {product.soldCount > 1000 ? `${(product.soldCount / 1000).toFixed(1)}k` : product.soldCount} sold
             </span>
           </div>
+          )}
 
           {/* Price */}
           <div className="flex flex-wrap items-end gap-3">

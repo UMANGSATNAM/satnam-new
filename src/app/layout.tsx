@@ -30,7 +30,8 @@ export const metadata: Metadata = {
   keywords: ["roasted chana", "roasted peanuts", "flavored chana", "snacks", "satnam singh chana", "namkeen", "chickpeas", "healthy snacks"],
   authors: [{ name: "Satnam Singh Chana" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/brand/satnam-icon.png",
+    apple: "/brand/satnam-icon.png",
   },
   openGraph: {
     title: "Satnam Singh Chana — Taste of Tradition",

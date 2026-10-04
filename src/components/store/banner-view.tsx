@@ -182,7 +182,20 @@ export function BannerView({
     </span>
   ) : null;
 
-  const productImage = banner.image ? (
+  const productImage = !banner.image ? null : banner.imageStyle === "cutout" ? (
+    // Transparent pack shot: no frame, floats with a soft shadow
+    <div
+      className={cn(
+        "relative transition-transform duration-500 [filter:drop-shadow(0_18px_22px_rgba(0,0,0,0.28))] group-hover:-translate-y-1 group-hover:rotate-0",
+        variant === "hero" && "aspect-square w-[70%] max-w-[460px] rotate-[4deg] sm:w-full",
+        variant === "promo" && "aspect-square w-full rotate-[5deg] scale-110",
+        variant === "wide" && "aspect-square w-full rotate-[4deg] scale-125",
+        variant === "popup" && "aspect-square w-full"
+      )}
+    >
+      <SmartImg src={banner.image} alt={banner.title} priority={priority} sizes="(max-width: 768px) 70vw, 35vw" className="object-contain" />
+    </div>
+  ) : (
     <div
       className={cn(
         "relative overflow-hidden border-[6px] border-white/90 shadow-2xl transition-transform duration-500 group-hover:-rotate-1 group-hover:scale-[1.03]",
@@ -194,7 +207,7 @@ export function BannerView({
     >
       <SmartImg src={banner.image} alt={banner.title} priority={priority} sizes="(max-width: 768px) 60vw, 30vw" className="object-cover" />
     </div>
-  ) : null;
+  );
 
   if (variant === "hero") {
     return (

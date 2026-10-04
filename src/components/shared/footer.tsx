@@ -23,11 +23,12 @@ import { toast } from "sonner";
 import type { Category, Settings } from "@/lib/types";
 
 interface FooterProps {
+  logoUrl?: string;
   categories: Category[];
   settings: Settings;
 }
 
-export function Footer({ categories, settings }: FooterProps) {
+export function Footer({ categories, settings, logoUrl }: FooterProps) {
   const { navigate } = useRouter();
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
@@ -119,6 +120,10 @@ export function Footer({ categories, settings }: FooterProps) {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Brand + contact */}
         <div className="flex flex-col gap-3">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={settings.brandName} className="h-20 w-auto self-start object-contain" />
+          ) : (
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-lg text-white">
               🫘
@@ -130,6 +135,7 @@ export function Footer({ categories, settings }: FooterProps) {
               </p>
             </div>
           </div>
+          )}
           <p className="text-xs text-muted-foreground leading-relaxed">
             Authentic, batch-roasted chana, peanuts, and flavorful snack combinations. Handpicked from Indian farms, vacuum sealed for optimal crunch.
           </p>

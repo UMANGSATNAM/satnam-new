@@ -179,7 +179,7 @@ export function Header({ categories, settings, homeConfig }: HeaderProps) {
           >
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={settings.brandName} className="h-10 w-auto max-w-[180px] object-contain sm:h-12" />
+              <img src={logoUrl} alt={settings.brandName} className="h-12 w-auto max-w-[200px] object-contain drop-shadow-sm sm:h-14" />
             ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-lg shadow-sm">
               🫘
@@ -314,10 +314,13 @@ export function Header({ categories, settings, homeConfig }: HeaderProps) {
               <SheetContent side="left" className="w-[300px] sm:w-[340px]">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gradient text-white">
-                      🫘
-                    </div>
-                    {settings.brandName}
+                    {logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoUrl} alt={settings.brandName} className="h-10 w-auto" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gradient text-white">🫘</div>
+                    )}
+                    <span className="sr-only sm:not-sr-only">{settings.brandName}</span>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="mt-4 flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-120px)]">

@@ -124,7 +124,7 @@ export function AppShell({ products, categories, settings, storefront }: AppShel
     <div className="flex min-h-screen flex-col">
       {showHeaderFooter && <Header categories={categories} settings={settings} homeConfig={storefront.config} />}
       <main className="flex-1">{content}</main>
-      {showHeaderFooter && <Footer categories={categories} settings={settings} />}
+      {showHeaderFooter && <Footer categories={categories} settings={settings} logoUrl={storefront.config.logoUrl} />}
       <CartDrawer freeShippingThreshold={settings.freeShippingThreshold} />
       {showHeaderFooter && <WhatsAppWidget settings={settings} />}
       {showHeaderFooter && <OfferPopup banners={storefront.banners} config={storefront.config} />}
