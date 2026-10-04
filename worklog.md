@@ -172,3 +172,28 @@ Unresolved issues / next-phase recommendations:
 - Wishlist page, order tracking page, search improvements, loading skeletons, error boundaries still TODO (from original enhancement list)
 - Could add webhook endpoint for Razorpay payment capture events
 - Could add email template customization in admin
+
+---
+Task ID: STOREFRONT-CMS (shrego.in-style homepage + admin-managed banners/offers)
+Agent: Claude
+Date: 2026-10-04
+
+Work Log:
+- New admin tabs: "Banners & Offers" and "Homepage"; Categories tab now has edit / delete / image / colour / reorder
+- Banner placements: Hero slider, Promo (2 side-by-side), Wide offer strip, Offer popup
+  - Two modes: "Design it here" (headline, highlight words, product photo, colours, button, coupon chip) or "Upload ready-made banner" (desktop + mobile image)
+  - Live preview inside the editor, show/hide, reorder, duplicate, schedule start/end date (auto on/off for sales)
+- Homepage config: logo upload, rotating top offer-bar messages, section show/hide/reorder, section titles,
+  hero autoplay seconds, Deals of the Day countdown (midnight IST / fixed date / off) + one-click deal toggles,
+  Popular Products tab categories, popup on/off + delay
+- Storage: banners + homepage config are JSON in the existing `Setting` table (keys storefront_banners, storefront_config) → NO prisma db push / migration needed
+- New APIs: GET /api/storefront (public, only live banners), GET/PUT /api/admin/storefront (admin), PUT/DELETE /api/categories/[id] (admin; delete blocked if category has products)
+- Fix: images uploaded from admin AFTER `next build` were not served in production (Next only serves /public files present at build).
+  Added /api/media/[...path] + rewrite /uploads/* → /api/media/* (path-traversal safe). Upload limit 5 MB.
+- Storefront: new homepage (hero slider w/ swipe+autoplay, trust strip, category tiles w/ "Shop Collection ↗", promo banners,
+  Deals of the Day rail + countdown, Popular Products tabs, wide offer banner, bestsellers, why-us, reviews, newsletter),
+  first-visit offer popup (once per 3 days, never on checkout), mobile search bar, rotating offer bar, logo support,
+  "From ₹X" price on multi-variant products, max 2 badges per product card
+- Removed the public "Admin Panel" button from the storefront header (admin still at /#/admin)
+- New display font Baloo 2 (next/font/google) for banners & headings
+- Verified: production build OK, banner save → store sync, uploads served after build, auth on all admin APIs

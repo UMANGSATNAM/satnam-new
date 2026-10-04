@@ -106,17 +106,15 @@ export function ProductCard({ product, className, compact = false }: ProductCard
               -{discount}% OFF
             </span>
           )}
-          {product.isBestseller && (
+          {product.isBestseller ? (
             <span className="flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
               <Flame size={9} /> Bestseller
             </span>
-          )}
-          {product.isNew && (
+          ) : product.isNew ? (
             <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-sm">
               <Sparkles size={9} /> New
             </span>
-          )}
-          {product.isDealOfDay && (
+          ) : product.isDealOfDay && (
             <span className="flex items-center gap-1 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
               <Zap size={9} /> Deal
             </span>
@@ -190,7 +188,7 @@ export function ProductCard({ product, className, compact = false }: ProductCard
             size={12}
             showValue
           />
-          <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600">
+          <span className="hidden items-center gap-0.5 text-[10px] font-medium text-emerald-600 sm:flex">
             <PackageCheck size={11} />
             {product.soldCount > 1000
               ? `${(product.soldCount / 1000).toFixed(1)}k sold`
@@ -202,6 +200,9 @@ export function ProductCard({ product, className, compact = false }: ProductCard
         <div className="mt-auto flex items-end justify-between gap-2 pt-1">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1.5">
+              {(product.variants?.length || 0) > 1 && (
+                <span className="text-xs font-medium text-muted-foreground">From</span>
+              )}
               <span className="text-base font-bold text-foreground sm:text-lg">
                 {formatINR(price)}
               </span>

@@ -35,14 +35,25 @@ import {
 import { useCart, useWishlist } from "@/lib/cart";
 import { navigate, useRouter } from "@/lib/router";
 import type { Category, Settings, Product } from "@/lib/types";
+import type { HomeConfig } from "@/lib/storefront-types";
 import { cn, formatINR } from "@/lib/utils";
 
 interface HeaderProps {
   categories: Category[];
   settings: Settings;
+  homeConfig?: HomeConfig;
 }
 
-export function Header({ categories, settings }: HeaderProps) {
+export function Header({ categories, settings, homeConfig }: HeaderProps) {
+  const announcements = (homeConfig?.announcements || []).filter(Boolean);
+  if (!announcements.length) announcements.push(settings.announcementBar || "Free Shipping on Orders Over ₹499");
+  const [annIdx, setAnnIdx] = useState(0);
+  useEffect(() => {
+    if (announcements.length < 2) return;
+    const t = setInterval(() => setAnnIdx((i) => (i + 1) % announcements.length), 4000);
+    return () => clearInterval(t);
+  }, [announcements.length]);
+  const logoUrl = homeConfig?.logoUrl;
   const { route, navigate: go } = useRouter();
   const cartCount = useCart((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const openCart = useCart((s) => s.openCart);
@@ -128,8 +139,9 @@ export function Header({ categories, settings }: HeaderProps) {
       <div className="bg-brand-gradient text-primary-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 py-1.5 text-[11px] sm:px-6 sm:text-xs">
           <div className="flex items-center gap-1.5 font-medium">
-            <Truck size={13} className="shrink-0" />
-            <span className="line-clamp-1">{settings.announcementBar || "Free Shipping on Orders Over ₹499"}</span>
+            <span key={annIdx} className="line-clamp-1 animate-in fade-in slide-in-from-bottom-1 duration-500">
+              {announcements[annIdx % announcements.length]}
+            </span>
           </div>
           <div className="hidden items-center gap-4 sm:flex">
             <button
@@ -148,12 +160,6 @@ export function Header({ categories, settings }: HeaderProps) {
               <Phone size={12} /> {settings.phone}
             </a>
           </div>
-          <button
-            onClick={() => go("/admin")}
-            className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium transition-colors hover:bg-white/25"
-          >
-            <LayoutDashboard size={11} /> Admin Panel
-          </button>
         </div>
       </div>
 
@@ -171,10 +177,15 @@ export function Header({ categories, settings }: HeaderProps) {
             className="flex shrink-0 items-center gap-2"
             aria-label="Home"
           >
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={settings.brandName} className="h-10 w-auto max-w-[180px] object-contain sm:h-12" />
+            ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-lg shadow-sm">
               🫘
             </div>
-            <div className="hidden flex-col leading-none sm:flex text-left">
+            )}
+            <div className={cn("hidden flex-col leading-none text-left", !logoUrl && "sm:flex")}>
               <span className="font-playfair text-base font-bold text-foreground">
                 {settings.brandName.split(" ")[0]} {settings.brandName.split(" ").slice(1).join(" ")}
               </span>
@@ -268,6 +279,15 @@ export function Header({ categories, settings }: HeaderProps) {
                   {wishlistCount}
                 </span>
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden gap-1.5 lg:flex"
+              onClick={() => go("/account")}
+              aria-label="My account"
+            >
+              <User size={18} /> <span className="text-sm">Login</span>
             </Button>
             <Button
               variant="default"
@@ -365,22 +385,27 @@ export function Header({ categories, settings }: HeaderProps) {
                     ))}
                   </div>
 
-                  <div className="mt-3 border-t pt-3">
-                    <button
-                      onClick={() => {
-                        go("/admin");
-                        setMobileOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2.5 text-left text-sm font-semibold text-primary"
-                    >
-                      <LayoutDashboard size={16} /> Admin Panel
-                    </button>
-                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
         </div>
+
+        {/* Mobile search */}
+        <form onSubmit={onSearch} className="px-3 pb-2.5 md:hidden">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search product"
+              className="h-10 rounded-full bg-muted/40 pl-9 pr-12 text-sm"
+            />
+            <Button type="submit" size="icon" className="absolute right-1 h-8 w-10 rounded-full" aria-label="Search">
+              <Search size={15} />
+            </Button>
+          </div>
+        </form>
 
         {/* Nav bar (desktop) */}
         <nav className="hidden border-t border-border/60 bg-card md:block">
@@ -443,12 +468,13 @@ export function Header({ categories, settings }: HeaderProps) {
                 <Heart size={13} className={wishlistCount > 0 ? "text-destructive fill-destructive" : ""} />
                 <span>Wishlist ({wishlistCount})</span>
               </button>
-              <span className="flex items-center gap-1.5">
-                <Phone size={13} className="text-primary" /> Support:{" "}
-                <a href={`tel:${settings.phone}`} className="font-semibold text-foreground hover:text-primary">
-                  {settings.phone}
-                </a>
-              </span>
+              <a href={`tel:${settings.phone}`} className="group flex items-center gap-2">
+                <Phone size={22} className="text-foreground/70" />
+                <span className="flex flex-col leading-tight">
+                  <span className="text-sm font-bold text-primary group-hover:underline">Need Help?</span>
+                  <span className="text-[11px] text-muted-foreground">{settings.phone}</span>
+                </span>
+              </a>
             </div>
           </div>
         </nav>

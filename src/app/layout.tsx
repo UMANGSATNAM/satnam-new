@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -13,6 +13,14 @@ const inter = Inter({
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Bold rounded display face for banners & headings (supports Hindi/Gujarati-friendly shapes)
+const display = Baloo_2({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
   display: "swap",
 });
 
@@ -45,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${playfair.variable} ${display.variable} font-sans antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />

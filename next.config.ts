@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
+  // Admin-uploaded images (saved after build) are served via /api/media
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [{ source: "/uploads/:path*", destination: "/api/media/:path*" }],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {

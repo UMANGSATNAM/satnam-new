@@ -47,6 +47,7 @@ import {
   Calendar,
   Receipt,
   FileSpreadsheet,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,9 +94,12 @@ import { navigate } from "@/lib/router";
 import { toast } from "sonner";
 import type { Product, Order, Category, Coupon, Settings } from "@/lib/types";
 import { StarRating } from "@/components/shared/star-rating";
+import { BannersView, HomepageView, CategoriesManager } from "@/components/admin/storefront-admin";
 
 type AdminTab =
   | "dashboard"
+  | "banners"
+  | "homepage"
   | "products"
   | "orders"
   | "categories"
@@ -139,6 +143,8 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
 
   const tabs: { id: AdminTab; label: string; icon: typeof Package; badge?: number }[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "banners", label: "Banners & Offers", icon: ImageIcon },
+    { id: "homepage", label: "Homepage", icon: Store },
     { id: "products", label: "Products", icon: Package },
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "categories", label: "Categories", icon: Tag },
@@ -246,7 +252,9 @@ export function AdminApp({ settings: initialSettings }: { settings: Settings }) 
         {tab === "dashboard" && <DashboardView />}
         {tab === "products" && <ProductsView />}
         {tab === "orders" && <OrdersView settings={initialSettings} />}
-        {tab === "categories" && <CategoriesView />}
+        {tab === "banners" && <BannersView />}
+        {tab === "homepage" && <HomepageView />}
+        {tab === "categories" && <CategoriesManager />}
         {tab === "reviews" && <ReviewsView />}
         {tab === "coupons" && <CouponsView />}
         {tab === "messages" && <MessagesView onUnreadChange={setUnreadMsgCount} />}

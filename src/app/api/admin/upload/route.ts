@@ -5,6 +5,8 @@ import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export async function POST(req: NextRequest) {
   const admin = await getAdminFromRequest();
   if (!admin) {
@@ -17,6 +19,9 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ error: "Image too large (max 5 MB)" }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -45,6 +50,7 @@ export async function POST(req: NextRequest) {
 
     await fs.writeFile(filePath, buffer);
 
+    // Served by /api/media via the /uploads rewrite (works for files added after build)
     const publicUrl = `/uploads/${filename}`;
     return NextResponse.json({
       success: true,

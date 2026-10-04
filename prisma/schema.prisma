@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -37,17 +37,17 @@ model Product {
   name            String
   slug            String   @unique
   shortDescription String?
-  description     String
+  description     String   @db.Text
   categoryId      String
   category        Category @relation(fields: [categoryId], references: [id])
   // comma-separated list of image URLs (JSON string)
-  images          String   @default("[]")
+  images          String   @default("[]") @db.Text
   // base price
   price           Float
   // sale price (optional)
   salePrice       Float?
   // weight variants as JSON: [{"label":"360 G","value":"360g","price":195}, ...]
-  variants        String   @default("[]")
+  variants        String   @default("[]") @db.Text
   // default display weight
   weight          String?
   inStock         Boolean  @default(true)
@@ -59,9 +59,9 @@ model Product {
   rating          Float    @default(4.5)
   reviewCount     Int      @default(0)
   tags            String   @default("") // comma separated
-  ingredients     String?
-  nutritionalInfo String?  // JSON string
-  benefits        String?  // JSON array string
+  ingredients     String?  @db.Text
+  nutritionalInfo String?  @db.Text // JSON string
+  benefits        String?  @db.Text // JSON array string
   shelfLife       String?
   storageInfo     String?
   soldCount       Int      @default(0)
@@ -134,7 +134,7 @@ model Review {
   email       String
   rating      Int      // 1-5
   title       String?
-  comment     String
+  comment     String   @db.Text
   verified    Boolean  @default(false)
   approved    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -162,7 +162,7 @@ model Coupon {
 model Setting {
   id    String @id @default(cuid())
   key   String @unique
-  value String
+  value String @db.Text
 }
 
 model NewsletterSubscriber {
@@ -177,7 +177,7 @@ model ContactMessage {
   email     String
   phone     String?
   subject   String
-  message   String
+  message   String   @db.Text
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }

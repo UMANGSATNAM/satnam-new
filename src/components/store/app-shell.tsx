@@ -24,14 +24,17 @@ import { AboutPage, ContactPage, RecipesPage } from "@/components/store/static-p
 import { AdminApp } from "@/components/admin/admin-app";
 import { useRouter } from "@/lib/router";
 import type { Product, Category, Settings } from "@/lib/types";
+import type { StorefrontData } from "@/lib/storefront-types";
+import { OfferPopup } from "@/components/store/offer-popup";
 
 interface AppShellProps {
   products: Product[];
   categories: Category[];
   settings: Settings;
+  storefront: StorefrontData;
 }
 
-export function AppShell({ products, categories, settings }: AppShellProps) {
+export function AppShell({ products, categories, settings, storefront }: AppShellProps) {
   const { route } = useRouter();
   const path = route.path;
   const segments = route.segments;
@@ -50,7 +53,7 @@ export function AppShell({ products, categories, settings }: AppShellProps) {
   let showHeaderFooter = true;
 
   if (segments.length === 0 || path === "/") {
-    content = <Home products={products} categories={categories} />;
+    content = <Home products={products} categories={categories} storefront={storefront} settings={settings} />;
   } else if (segments[0] === "products") {
     content = (
       <ProductsList
@@ -119,11 +122,12 @@ export function AppShell({ products, categories, settings }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {showHeaderFooter && <Header categories={categories} settings={settings} />}
+      {showHeaderFooter && <Header categories={categories} settings={settings} homeConfig={storefront.config} />}
       <main className="flex-1">{content}</main>
       {showHeaderFooter && <Footer categories={categories} settings={settings} />}
       <CartDrawer freeShippingThreshold={settings.freeShippingThreshold} />
       {showHeaderFooter && <WhatsAppWidget settings={settings} />}
+      {showHeaderFooter && <OfferPopup banners={storefront.banners} config={storefront.config} />}
     </div>
   );
 }

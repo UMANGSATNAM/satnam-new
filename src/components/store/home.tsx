@@ -1,435 +1,482 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  ArrowUpRight,
   Leaf,
   Smile,
   Heart,
-  Star,
   ShieldCheck,
-  Award,
   Truck,
-  Clock,
   ChevronLeft,
   ChevronRight,
   Quote,
+  PackageCheck,
+  BadgeIndianRupee,
+  Flame,
+  Mail,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/shared/product-card";
 import { StarRating } from "@/components/shared/star-rating";
+import { BannerView, SmartImg } from "@/components/store/banner-view";
 import { useRouter } from "@/lib/router";
-import type { Product, Category } from "@/lib/types";
-import { useRef } from "react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { Product, Category, Settings } from "@/lib/types";
+import type { Banner, HomeConfig, HomeSectionId, StorefrontData } from "@/lib/storefront-types";
 
 interface HomeProps {
   products: Product[];
   categories: Category[];
+  storefront: StorefrontData;
+  settings: Settings;
 }
 
-export function Home({ products, categories }: HomeProps) {
-  const { navigate } = useRouter();
+export function Home({ products, categories, storefront, settings }: HomeProps) {
+  const { banners, config } = storefront;
+  const byPlacement = (p: Banner["placement"]) =>
+    banners.filter((b) => b.placement === p).sort((a, b) => a.order - b.order);
 
-  const featuredCategories = categories.slice(0, 5);
-  const dealsOfDay = products.filter((p) => p.isDealOfDay).slice(0, 8);
-  const bestsellers = products.filter((p) => p.isBestseller).slice(0, 4);
-  const popularPeanuts = products
-    .filter((p) => p.category?.slug === "roasted-peanuts" || p.category?.slug === "flavored-peanuts")
-    .slice(0, 4);
-  const popularChana = products
-    .filter((p) => p.category?.slug === "roasted-chana" || p.category?.slug === "flavored-chana")
-    .slice(0, 4);
-  const combos = products.filter((p) => p.category?.slug === "kitchen-essentials").slice(0, 4);
+  const sections: Record<HomeSectionId, React.ReactNode> = {
+    hero: <HeroSlider banners={byPlacement("hero")} autoplay={config.heroAutoplaySeconds} />,
+    trustStrip: <TrustStrip freeShip={settings.freeShippingThreshold} />,
+    categories: <CategoryTiles categories={categories} products={products} title={config.categoriesTitle} />,
+    promo: <PromoBanners banners={byPlacement("promo")} />,
+    deals: <DealsOfDay products={products} config={config} />,
+    popular: <PopularProducts products={products} categories={categories} config={config} />,
+    wide: <WideBanners banners={byPlacement("wide")} />,
+    bestsellers: <Bestsellers products={products} title={config.bestsellersTitle} />,
+    whyUs: <WhyUs />,
+    testimonials: <Testimonials />,
+    newsletter: <Newsletter />,
+  };
 
   return (
     <div className="flex flex-col">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-amber-50 to-primary/5">
-        <div className="absolute inset-0 opacity-30">
-          <Image
-            src="/brand/hero-banner.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-        </div>
-        <div className="relative mx-auto grid max-w-7xl items-center gap-6 px-4 py-10 sm:px-6 md:grid-cols-2 md:py-16 lg:py-20">
-          <div className="flex flex-col gap-4">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Leaf size={13} /> 100% Natural • Farm Fresh • Vacuum Packed
-            </span>
-            <h1 className="font-playfair text-3xl font-bold leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
-              Roasted to <span className="text-primary">Perfection</span>,
-              <br />
-              Packed with <span className="text-amber-brand">Goodness</span>
-            </h1>
-            <p className="max-w-md text-sm text-muted-foreground sm:text-base">
-              Premium roasted chana & peanuts from {`India's`} finest farms. Traditionally roasted,
-              boldly flavored, and vacuum-packed to lock in that signature crunch. The healthy snack
-              you{"'"}ll crave.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button
-                size="lg"
-                className="gap-2 rounded-full px-6 text-base shadow-lg"
-                onClick={() => navigate("/products")}
-              >
-                Shop Now <ArrowRight size={18} />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="gap-2 rounded-full px-6 text-base"
-                onClick={() => navigate("/category/kitchen-essentials")}
-              >
-                View Combo Packs
-              </Button>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-5 text-xs text-muted-foreground sm:text-sm">
-              <span className="flex items-center gap-1.5">
-                <StarRating rating={4.7} size={14} showValue />
-                <span className="font-semibold text-foreground">4.7/5</span> from 2,800+ reviews
-              </span>
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck size={15} className="text-primary" /> FSSAI Certified
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Truck size={15} className="text-primary" /> Free ship ₹499+
-              </span>
-            </div>
-          </div>
+      {config.sections
+        .filter((s) => s.enabled)
+        .map((s) => (
+          <div key={s.id}>{sections[s.id]}</div>
+        ))}
+    </div>
+  );
+}
 
-          {/* Hero product collage */}
-          <div className="relative hidden h-[380px] md:block">
-            <div className="absolute right-0 top-0 h-56 w-56 overflow-hidden rounded-3xl border-4 border-card shadow-2xl">
-              <Image src="/products/roasted-chana-plain.png" alt="Roasted Chana" fill className="object-cover" sizes="224px" />
-            </div>
-            <div className="absolute left-4 top-24 h-48 w-48 overflow-hidden rounded-3xl border-4 border-card shadow-2xl">
-              <Image src="/products/roasted-peanuts-salted.png" alt="Roasted Peanuts" fill className="object-cover" sizes="192px" />
-            </div>
-            <div className="absolute bottom-0 right-16 h-44 w-44 overflow-hidden rounded-3xl border-4 border-card shadow-2xl">
-              <Image src="/products/flavored-chana.png" alt="Flavored Chana" fill className="object-cover" sizes="176px" />
-            </div>
-            <div className="absolute bottom-8 left-0 flex items-center gap-2 rounded-2xl bg-card px-3 py-2 shadow-xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                <Award size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-bold leading-tight">Premium Quality</p>
-                <p className="text-[10px] text-muted-foreground">Since 1985</p>
-              </div>
-            </div>
-          </div>
-        </div>
+/* ------------------------------------------------------------------ */
+/* Hero slider                                                         */
+/* ------------------------------------------------------------------ */
 
-        {/* Marquee strip */}
-        <div className="relative border-t border-border/60 bg-card/80 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-1 px-4 py-2 text-xs font-semibold text-foreground/80 sm:text-sm">
-            <span className="flex items-center gap-1.5">🥜 100% Natural Peanuts</span>
-            <span className="hidden text-muted-foreground sm:inline">•</span>
-            <span className="flex items-center gap-1.5">🫘 Protein-Rich Chana</span>
-            <span className="hidden text-muted-foreground sm:inline">•</span>
-            <span className="flex items-center gap-1.5">⚡ Traditionally Roasted</span>
-            <span className="hidden text-muted-foreground sm:inline">•</span>
-            <span className="flex items-center gap-1.5">🌿 No Preservatives</span>
-            <span className="hidden text-muted-foreground sm:inline">•</span>
-            <span className="flex items-center gap-1.5">📦 Vacuum Packed</span>
-          </div>
-        </div>
-      </section>
+function HeroSlider({ banners, autoplay }: { banners: Banner[]; autoplay: number }) {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchX = useRef<number | null>(null);
+  const count = banners.length;
 
-      {/* Featured Categories */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Explore Our Range
-            </p>
-            <h2 className="font-playfair text-2xl font-bold sm:text-3xl">Featured Categories</h2>
+  useEffect(() => {
+    if (count < 2 || paused || !autoplay) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % count), Math.max(2, autoplay) * 1000);
+    return () => clearInterval(t);
+  }, [count, paused, autoplay]);
+
+  if (count === 0) return null;
+  const go = (d: number) => setIndex((i) => (i + d + count) % count);
+
+  return (
+    <section
+      className="relative overflow-hidden"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+      onTouchEnd={(e) => {
+        if (touchX.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+        touchX.current = null;
+      }}
+      aria-roledescription="carousel"
+    >
+      <div
+        className="flex transition-transform duration-700 ease-[cubic-bezier(.22,.8,.26,1)]"
+        style={{ transform: `translateX(-${index * 100}%)` }}
+      >
+        {banners.map((b, i) => (
+          <div key={b.id} className="w-full shrink-0" aria-hidden={i !== index}>
+            <BannerView banner={b} variant="hero" priority={i === 0} />
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 text-primary"
-            onClick={() => navigate("/products")}
+        ))}
+      </div>
+
+      {count > 1 && (
+        <>
+          <button
+            onClick={() => go(-1)}
+            aria-label="Previous banner"
+            className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-lg backdrop-blur transition hover:bg-white md:flex"
           >
-            View all <ArrowRight size={15} />
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-4">
-          {featuredCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => navigate(`/category/${cat.slug}`)}
-              className="group relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl border border-border/60 p-4 text-center transition-all hover:-translate-y-1 hover:shadow-lg"
-              style={{ backgroundColor: cat.color || "#fef3c7" }}
-            >
-              <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-110 sm:h-24 sm:w-24">
-                {cat.image ? (
-                  <Image src={cat.image} alt={cat.name} fill sizes="96px" className="object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-3xl">
-                    {cat.icon}
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-bold leading-tight text-foreground">{cat.name}</p>
-                {cat.productCount !== undefined && (
-                  <p className="text-[11px] text-foreground/60">{cat.productCount} products</p>
-                )}
-              </div>
-              <span className="flex items-center gap-1 text-xs font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                Shop <ArrowRight size={11} />
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Two-column highlight */}
-      {bestsellers.length >= 2 && (
-        <section className="mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            {bestsellers.slice(0, 2).map((p, idx) => (
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={() => go(1)}
+            aria-label="Next banner"
+            className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-lg backdrop-blur transition hover:bg-white md:flex"
+          >
+            <ChevronRight size={20} />
+          </button>
+          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
+            {banners.map((b, i) => (
               <button
-                key={p.id}
-                onClick={() => navigate(`/product/${p.slug}`)}
-                className={`group relative flex overflow-hidden rounded-3xl p-6 text-left shadow-md transition-all hover:shadow-xl ${
-                  idx === 0
-                    ? "bg-gradient-to-br from-amber-100 to-amber-200"
-                    : "bg-gradient-to-br from-emerald-100 to-emerald-200"
-                }`}
+                key={b.id}
+                onClick={() => setIndex(i)}
+                aria-label={`Go to banner ${i + 1}`}
+                className={cn(
+                  "h-2.5 rounded-full transition-all",
+                  i === index ? "w-8 bg-[#0f6b43]" : "w-2.5 bg-black/25 hover:bg-black/40"
+                )}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function TrustStrip({ freeShip }: { freeShip: number }) {
+  const items = [
+    { icon: Leaf, title: "100% Natural", sub: "No preservatives" },
+    { icon: PackageCheck, title: "Vacuum Packed", sub: "Stays crunchy for months" },
+    { icon: ShieldCheck, title: "FSSAI Certified", sub: "Hygienic processing" },
+    { icon: Truck, title: `Free Shipping ₹${freeShip}+`, sub: "Pan-India delivery" },
+    { icon: BadgeIndianRupee, title: "Cash on Delivery", sub: "Pay when it arrives" },
+  ];
+  return (
+    <section className="border-b border-border/60 bg-card">
+      <div className="no-scrollbar mx-auto flex max-w-7xl gap-6 overflow-x-auto px-4 py-4 sm:px-6 lg:justify-between">
+        {items.map((it) => (
+          <div key={it.title} className="flex shrink-0 items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0f6b43]/10 text-[#0f6b43]">
+              <it.icon size={19} />
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">{it.title}</p>
+              <p className="text-[11px] text-muted-foreground">{it.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const TILE_COLORS = ["#efd27a", "#ec8f8f", "#f6b98a", "#b9655c", "#cfe6b0", "#bcd7ef"];
+
+function CategoryTiles({
+  categories,
+  products,
+  title,
+}: {
+  categories: Category[];
+  products: Product[];
+  title: string;
+}) {
+  const { navigate } = useRouter();
+  if (!categories.length) return null;
+  const imageFor = (c: Category) =>
+    c.image || products.find((p) => p.categoryId === c.id)?.images?.[0] || "/products/roasted-chana-plain.png";
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
+      <SectionTitle title={title} />
+      <div className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5">
+        {categories.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => navigate(`/category/${c.slug}`)}
+            className="group flex w-[46%] shrink-0 snap-start flex-col items-center gap-3 text-center sm:w-auto"
+          >
+            <div
+              className="relative aspect-[1/0.95] w-full overflow-hidden rounded-xl"
+              style={{ backgroundColor: c.color && c.color !== "#fef3c7" ? c.color : TILE_COLORS[i % TILE_COLORS.length] }}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.45),transparent_62%)]" />
+              <div className="absolute inset-[14%] overflow-hidden rounded-xl shadow-xl ring-4 ring-white/80 transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-105">
+                <SmartImg src={imageFor(c)} alt={c.name} sizes="(max-width:640px) 45vw, 20vw" className="object-cover" />
+              </div>
+              {c.icon && (
+                <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-base shadow">
+                  {c.icon}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-base font-medium text-foreground sm:text-lg">{c.name}</p>
+              <span className="mt-1 inline-flex items-center gap-1 border-b border-foreground pb-0.5 text-sm font-medium text-foreground/80 transition-colors group-hover:border-[#0f6b43] group-hover:text-[#0f6b43]">
+                Shop Collection <ArrowUpRight size={15} />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PromoBanners({ banners }: { banners: Banner[] }) {
+  if (!banners.length) return null;
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6">
+      <div className={cn("grid gap-5", banners.length > 1 && "md:grid-cols-2")}>
+        {banners.slice(0, 4).map((b) => (
+          <BannerView key={b.id} banner={b} variant="promo" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WideBanners({ banners }: { banners: Banner[] }) {
+  if (!banners.length) return null;
+  return (
+    <section className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-8 sm:px-6">
+      {banners.map((b) => (
+        <BannerView key={b.id} banner={b} variant="wide" />
+      ))}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Deals of the day                                                    */
+/* ------------------------------------------------------------------ */
+
+function nextMidnightIST(now: number) {
+  const IST = 5.5 * 3600 * 1000;
+  const day = 24 * 3600 * 1000;
+  return Math.floor((now + IST) / day) * day + day - IST;
+}
+
+function useCountdown(config: HomeConfig) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+    };
+  }, []);
+  if (now === null || config.dealsTimer === "off") return null;
+  const target =
+    config.dealsTimer === "fixed" && config.dealsEndsAt ? new Date(config.dealsEndsAt).getTime() : nextMidnightIST(now);
+  const diff = Math.max(0, target - now);
+  if (config.dealsTimer === "fixed" && diff === 0) return null;
+  const s = Math.floor(diff / 1000);
+  return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
+}
+
+function DealsOfDay({ products, config }: { products: Product[]; config: HomeConfig }) {
+  const deals = products.filter((p) => p.isDealOfDay).slice(0, 12);
+  const left = useCountdown(config);
+  if (!deals.length) return null;
+  const cells = left
+    ? [...(left.d ? [{ v: left.d, l: "Days" }] : []), { v: left.h, l: "Hrs" }, { v: left.m, l: "Min" }, { v: left.s, l: "Sec" }]
+    : [];
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
+      <div className="mb-7 flex flex-col items-center gap-3 text-center">
+        <h2 className="font-display text-3xl font-bold text-[#1f3b4d] sm:text-[2.6rem]">{config.dealsTitle}</h2>
+        {cells.length > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="flex items-center gap-1 font-semibold text-destructive">
+              <Flame size={16} /> Ends in
+            </span>
+            {cells.map((c) => (
+              <span key={c.l} className="flex min-w-[52px] flex-col items-center rounded-lg bg-[#1f3b4d] px-2 py-1 text-white">
+                <span className="font-display text-lg font-bold leading-none tabular-nums">{String(c.v).padStart(2, "0")}</span>
+                <span className="text-[9px] uppercase tracking-wider opacity-75">{c.l}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <Rail>
+        {deals.map((p) => (
+          <div key={p.id} className="w-[48%] shrink-0 snap-start sm:w-[32%] lg:w-[calc(25%-12px)]">
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </Rail>
+    </section>
+  );
+}
+
+function Rail({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: "smooth" });
+  return (
+    <div className="relative">
+      <div ref={ref} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:gap-4">
+        {children}
+      </div>
+      <button
+        onClick={() => scroll(-1)}
+        className="absolute -left-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full border border-border bg-card shadow-md hover:bg-muted md:flex"
+        aria-label="Scroll left"
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        onClick={() => scroll(1)}
+        className="absolute -right-4 top-[38%] hidden h-11 w-11 items-center justify-center rounded-full border border-border bg-card shadow-md hover:bg-muted md:flex"
+        aria-label="Scroll right"
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function PopularProducts({
+  products,
+  categories,
+  config,
+}: {
+  products: Product[];
+  categories: Category[];
+  config: HomeConfig;
+}) {
+  const { navigate } = useRouter();
+  const tabs = useMemo(() => {
+    const list = config.popularTabs.length
+      ? config.popularTabs.map((s) => categories.find((c) => c.slug === s)).filter(Boolean) as Category[]
+      : categories;
+    return [{ id: "all", slug: "", name: "All" } as Pick<Category, "id" | "slug" | "name">, ...list.filter((c) => (c.productCount ?? 1) > 0)];
+  }, [categories, config.popularTabs]);
+  const [active, setActive] = useState("all");
+
+  const shown = useMemo(() => {
+    const list = active === "all" ? products : products.filter((p) => p.categoryId === active);
+    return [...list].sort((a, b) => b.soldCount - a.soldCount).slice(0, 8);
+  }, [products, active]);
+
+  const activeSlug = tabs.find((t) => t.id === active)?.slug;
+
+  return (
+    <section className="bg-[#f7f5ef] py-10 md:py-14">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <h2 className="font-display text-3xl font-bold text-[#1f3b4d] sm:text-[2.6rem]">{config.popularTitle}</h2>
+          <div className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActive(t.id)}
+                className={cn(
+                  "shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:text-base",
+                  active === t.id ? "border-[#1f3b4d] text-[#1f3b4d]" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
               >
-                <div className="relative z-10 flex flex-col gap-2">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                    {idx === 0 ? "Gujarat's Famous" : "All-Time Classic"}
-                  </p>
-                  <h3 className="font-playfair text-xl font-bold leading-tight text-foreground sm:text-2xl">
-                    {p.name.split("(")[0].trim()}
-                  </h3>
-                  <p className="text-sm text-foreground/70">
-                    {idx === 0 ? "Extra-Crispy, Extra-Satisfying" : "Crunchy, Salty, Delicious"}
-                  </p>
-                  <div className="mt-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-md transition-transform group-hover:scale-105">
-                      Shop Now <ArrowRight size={14} />
-                    </span>
-                  </div>
-                </div>
-                <div className="absolute -right-4 -top-4 h-36 w-36 overflow-hidden rounded-full border-4 border-white shadow-lg transition-transform group-hover:rotate-6 sm:h-44 sm:w-44">
-                  {p.images?.[0] && (
-                    <Image src={p.images[0]} alt={p.name} fill sizes="176px" className="object-cover" />
-                  )}
-                </div>
+                {t.name}
               </button>
             ))}
           </div>
-        </section>
-      )}
-
-      {/* Deals of the Day */}
-      {dealsOfDay.length > 0 && (
-        <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
-          <div className="mb-6 flex items-end justify-between">
-            <div>
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-destructive">
-                <Clock size={13} /> Limited Time
-              </p>
-              <h2 className="font-playfair text-2xl font-bold sm:text-3xl">Deals of the Day</h2>
-            </div>
-          </div>
-          <Carousel>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4">
-              {dealsOfDay.slice(0, 8).map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </Carousel>
-        </section>
-      )}
-
-      {/* Popular Products with tabs */}
-      <section className="bg-muted/30 py-10 md:py-14">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-          <div className="mb-6 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Customer Favorites
-            </p>
-            <h2 className="font-playfair text-2xl font-bold sm:text-3xl">Popular Products</h2>
-          </div>
-
-          {/* Peanuts tab */}
-          {popularPeanuts.length > 0 && (
-            <div className="mb-8">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-lg font-bold">
-                  <span className="text-2xl">🥜</span> Peanuts
-                </h3>
-                <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => navigate("/category/roasted-peanuts")}>
-                  Shop all <ArrowRight size={14} />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4">
-                {popularPeanuts.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Chana tab */}
-          {popularChana.length > 0 && (
-            <div className="mb-8">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-lg font-bold">
-                  <span className="text-2xl">🫘</span> Chana
-                </h3>
-                <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => navigate("/category/roasted-chana")}>
-                  Shop all <ArrowRight size={14} />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4">
-                {popularChana.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Combos */}
-          {combos.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-lg font-bold">
-                  <span className="text-2xl">📦</span> Combo Packs
-                </h3>
-                <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => navigate("/category/kitchen-essentials")}>
-                  Shop all <ArrowRight size={14} />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4">
-                {combos.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-      </section>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+          {shown.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="outline"
+            className="gap-2 rounded-full border-[#1f3b4d] px-8 text-[#1f3b4d] hover:bg-[#1f3b4d] hover:text-white"
+            onClick={() => navigate(activeSlug ? `/category/${activeSlug}` : "/products")}
+          >
+            View all products <ArrowRight size={16} />
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-      {/* Why Satnam Singh Chana */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 md:py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-primary/5 via-amber-50/50 to-primary/5 p-6 md:p-10">
-          <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Why Choose Us?
-            </p>
-            <h2 className="font-playfair text-2xl font-bold sm:text-3xl md:text-4xl">
-              From Farm to Table — The Finest Quality
-            </h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
-              Three generations of expertise in roasting the perfect chana and peanuts.
-            </p>
+function Bestsellers({ products, title }: { products: Product[]; title: string }) {
+  const list = products.filter((p) => p.isBestseller).slice(0, 8);
+  if (!list.length) return null;
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:py-14">
+      <SectionTitle title={title} />
+      <Rail>
+        {list.map((p) => (
+          <div key={p.id} className="w-[48%] shrink-0 snap-start sm:w-[32%] lg:w-[calc(25%-12px)]">
+            <ProductCard product={p} />
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                icon: Leaf,
-                title: "Freshness",
-                desc: "Experience the unmatched freshness of our chana & peanuts. Rapid processing and airtight vacuum packaging lock in flavor and nutrition.",
-                color: "text-emerald-600 bg-emerald-100",
-              },
-              {
-                icon: Smile,
-                title: "Taste",
-                desc: "Savor the rich, nutty flavor that has delighted taste buds for generations. A perfect blend of tradition and taste in every bite.",
-                color: "text-amber-600 bg-amber-100",
-              },
-              {
-                icon: Heart,
-                title: "Health",
-                desc: "Packed with protein, fiber, and essential nutrients, our snacks are a wholesome choice for you and your family.",
-                color: "text-rose-600 bg-rose-100",
-              },
-            ].map((f) => (
-              <div
-                key={f.title}
-                className="flex flex-col items-center gap-3 rounded-2xl bg-card p-6 text-center shadow-sm"
-              >
-                <div className={`flex h-14 w-14 items-center justify-center rounded-full ${f.color}`}>
-                  <f.icon size={26} />
-                </div>
-                <h3 className="font-playfair text-xl font-bold">{f.title}</h3>
-                <p className="text-sm text-muted-foreground">{f.desc}</p>
+        ))}
+      </Rail>
+    </section>
+  );
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <h2 className="mb-7 text-center font-display text-3xl font-bold text-[#1f3b4d] sm:text-[2.6rem]">{title}</h2>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function WhyUs() {
+  const items = [
+    {
+      icon: Leaf,
+      title: "Freshness",
+      desc: "Roasted in small batches and vacuum packed the same day, so every pack opens crunchy.",
+      color: "text-emerald-700 bg-emerald-100",
+    },
+    {
+      icon: Smile,
+      title: "Taste",
+      desc: "Traditional bhatti roasting and masalas ground in-house — the taste Gujarat grew up with.",
+      color: "text-amber-700 bg-amber-100",
+    },
+    {
+      icon: Heart,
+      title: "Health",
+      desc: "High protein, high fibre, no palm oil and no preservatives. Snacking you don't have to hide.",
+      color: "text-rose-700 bg-rose-100",
+    },
+  ];
+  return (
+    <section className="bg-[#0f5132] py-12 text-white md:py-16">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <div className="mb-10 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#f5c542]">Why choose us</p>
+          <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">From Farm to Table — The Finest Quality</h2>
+        </div>
+        <div className="grid gap-5 md:grid-cols-3">
+          {items.map((f) => (
+            <div key={f.title} className="flex flex-col items-center gap-3 rounded-2xl bg-white/[0.06] p-7 text-center ring-1 ring-white/10">
+              <div className={`flex h-14 w-14 items-center justify-center rounded-full ${f.color}`}>
+                <f.icon size={26} />
               </div>
-            ))}
-          </div>
+              <h3 className="font-display text-2xl font-bold">{f.title}</h3>
+              <p className="text-sm text-white/75">{f.desc}</p>
+            </div>
+          ))}
         </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="bg-muted/30 py-12 md:py-16">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-          <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Loved by Thousands
-            </p>
-            <h2 className="font-playfair text-2xl font-bold sm:text-3xl">
-              What Our Customers Say
-            </h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <div
-                key={i}
-                className="relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-6 shadow-sm"
-              >
-                <Quote className="absolute right-4 top-4 h-8 w-8 text-primary/15" />
-                <StarRating rating={t.rating} size={16} />
-                <p className="text-sm leading-relaxed text-foreground/80">&ldquo;{t.text}&rdquo;</p>
-                <div className="mt-auto flex items-center gap-3 pt-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                    {t.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.location}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA banner */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl bg-brand-gradient p-8 text-center text-primary-foreground shadow-xl md:p-12">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-          <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-white/10" />
-          <div className="relative z-10 flex flex-col items-center gap-4">
-            <h2 className="font-playfair text-2xl font-bold sm:text-3xl md:text-4xl">
-              Ready to Taste the Difference?
-            </h2>
-            <p className="max-w-xl text-sm text-primary-foreground/90 sm:text-base">
-              Join 50,000+ happy customers. Use code <span className="rounded bg-white/20 px-2 py-0.5 font-bold">WELCOME10</span> for 10% off your first order.
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="gap-2 rounded-full px-8 text-base shadow-lg"
-              onClick={() => navigate("/products")}
-            >
-              Start Shopping <ArrowRight size={18} />
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -438,47 +485,97 @@ const TESTIMONIALS = [
     name: "Rajesh Kumar",
     location: "Delhi",
     rating: 5,
-    text: "The Khari Sing peanuts are the best I've ever had! Extra crispy and perfectly salted. The vacuum packaging keeps them fresh for months. Will order again!",
+    text: "The Khari Sing peanuts are the best I've ever had! Extra crispy and perfectly salted. The vacuum packaging keeps them fresh for months.",
   },
   {
     name: "Priya Sharma",
     location: "Mumbai",
     rating: 5,
-    text: "I ordered the flavored chana combo and loved every flavor. The black pepper and mirch masala are my favorites. Healthy and tasty — perfect evening snack!",
+    text: "Ordered the flavoured chana combo and loved every flavour. Black pepper and mirch masala are my favourites — perfect evening snack!",
   },
   {
     name: "Amit Patel",
     location: "Ahmedabad",
     rating: 5,
-    text: "Being from Gujarat, I know my peanuts. These are authentic, fresh and crunchy. Delivery was quick and the packaging was excellent. Highly recommended!",
+    text: "Being from Gujarat, I know my peanuts. These are authentic, fresh and crunchy. Delivery was quick and packing was excellent.",
   },
 ];
 
-function Carousel({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const scroll = (dir: "left" | "right") => {
-    if (!ref.current) return;
-    ref.current.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+function Testimonials() {
+  return (
+    <section className="bg-[#f7f5ef] py-12 md:py-16">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <SectionTitle title="What Our Customers Say" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+              <Quote className="absolute right-4 top-4 h-8 w-8 text-[#0f6b43]/15" />
+              <StarRating rating={t.rating} size={16} />
+              <p className="text-sm leading-relaxed text-foreground/80">&ldquo;{t.text}&rdquo;</p>
+              <div className="mt-auto flex items-center gap-3 pt-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0f6b43]/10 font-bold text-[#0f6b43]">
+                  {t.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.location}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Newsletter() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes("@")) return toast.error("Please enter a valid email");
+    setLoading(true);
+    try {
+      const r = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!r.ok) throw new Error();
+      toast.success("You're in! Watch your inbox for exclusive offers 🎉");
+      setEmail("");
+    } catch {
+      toast.error("Could not subscribe, please try again");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
-    <div className="relative">
-      <div ref={ref} className="no-scrollbar overflow-x-auto">
-        {children}
+    <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
+      <div className="relative overflow-hidden rounded-3xl bg-[#efd27a] px-6 py-10 text-center sm:px-12">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/25" />
+        <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-white/20" />
+        <div className="relative mx-auto flex max-w-xl flex-col items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#0f6b43] shadow">
+            <Mail size={22} />
+          </span>
+          <h2 className="font-display text-2xl font-bold text-[#1f2a24] sm:text-3xl">Get offers before everyone else</h2>
+          <p className="text-sm text-[#1f2a24]/75">New flavours, festive combos and members-only coupons. No spam, promise.</p>
+          <form onSubmit={submit} className="mt-2 flex w-full max-w-md gap-2">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Your email address"
+              className="h-11 flex-1 rounded-full border-0 bg-white px-5"
+            />
+            <Button type="submit" disabled={loading} className="h-11 rounded-full bg-[#0f6b43] px-6 hover:bg-[#0c5a38]">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Subscribe"}
+            </Button>
+          </form>
+        </div>
       </div>
-      <button
-        onClick={() => scroll("left")}
-        className="absolute -left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card shadow-md hover:bg-muted md:flex"
-        aria-label="Scroll left"
-      >
-        <ChevronLeft size={18} />
-      </button>
-      <button
-        onClick={() => scroll("right")}
-        className="absolute -right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card shadow-md hover:bg-muted md:flex"
-        aria-label="Scroll right"
-      >
-        <ChevronRight size={18} />
-      </button>
-    </div>
+    </section>
   );
 }
